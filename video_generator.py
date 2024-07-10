@@ -36,21 +36,23 @@ from google.cloud import speech_v1
 import srt
 
 
-_AUDIO_OUTPUT = "./readaloud.mp3"
-_AUDIO_WAV = "./readaloud.wav"
-_IMAGE_FILE_NAME = "imagen"
-_SRT_FILE_OUTPUT = "./subtitles.srt"
-_VIDEO_OUTPUT_WITHOUT_AUDIO = "./mutedvideo.mp4"
-_VIDEO_OUTPUT_WITH_AUDIO = "./withaudiovideo.mp4"
-_VIDEO_OUTPUT_FINAL = "./finalvideo.mp4"
-_VIDEO_OUTPUT_FINAL_WITH_SRT = "./finalvideosubs.mp4"
+_AUDIO_OUTPUT: Final[str] = "./readaloud.mp3"
+_AUDIO_WAV: Final[str] = "./readaloud.wav"
+_IMAGE_FILE_NAME: Final[str] = "imagen"
+_SRT_FILE_OUTPUT: Final[str] = "./subtitles.srt"
+_VIDEO_OUTPUT_WITHOUT_AUDIO: Final[str] = "./mutedvideo.mp4"
+_VIDEO_OUTPUT_WITH_AUDIO: Final[str] = "./withaudiovideo.mp4"
+_VIDEO_OUTPUT_FINAL: Final[str] = "./finalvideo.mp4"
+_VIDEO_OUTPUT_FINAL_WITH_SRT: Final[str] = "./finalvideosubs.mp4"
 
-_CLOUD_PROJECT_LOCATION = "us-central1"
+_CLOUD_PROJECT_LOCATION: Final[str] = "us-central1"
 
 # https://cloud.google.com/text-to-speech/docs/voices
-_LANGUAGE = "es-US"
-_VOICE = "es-US-Polyglot-1"
-_SSML_GENDER = texttospeech.SsmlVoiceGender.MALE
+_LANGUAGE: Final[str] = "en-US"
+_VOICE: Final[str] = "en-US-Neural2-F"
+_SSML_GENDER: Final[texttospeech.SsmlVoiceGender] = (
+    texttospeech.SsmlVoiceGender.FEMALE
+)
 
 
 def _summarize_article(text_input_path: str, gcp: str) -> str:
@@ -347,7 +349,7 @@ def _fetch_text_from_audio_with_timings(audio_path: str) -> object:
       enable_word_time_offsets=True,
       enable_automatic_punctuation=True,
       sample_rate_hertz=24000,
-      language_code="es-US",
+      language_code=_LANGUAGE,
   )
   audio = speech_v1.RecognitionAudio(content=content)
   operation = client.long_running_recognize(config=config, audio=audio)

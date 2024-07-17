@@ -36,21 +36,21 @@ from google.cloud import speech_v1
 import srt
 
 
-_AUDIO_OUTPUT: Final[str] = "./readaloud.mp3"
-_AUDIO_WAV: Final[str] = "./readaloud.wav"
-_IMAGE_FILE_NAME: Final[str] = "imagen"
-_SRT_FILE_OUTPUT: Final[str] = "./subtitles.srt"
-_VIDEO_OUTPUT_WITHOUT_AUDIO: Final[str] = "./mutedvideo.mp4"
-_VIDEO_OUTPUT_WITH_AUDIO: Final[str] = "./withaudiovideo.mp4"
-_VIDEO_OUTPUT_FINAL: Final[str] = "./finalvideo.mp4"
-_VIDEO_OUTPUT_FINAL_WITH_SRT: Final[str] = "./finalvideosubs.mp4"
+_AUDIO_OUTPUT: str = "./readaloud.mp3"
+_AUDIO_WAV: str = "./readaloud.wav"
+_IMAGE_FILE_NAME: str = "imagen"
+_SRT_FILE_OUTPUT: str = "./subtitles.srt"
+_VIDEO_OUTPUT_WITHOUT_AUDIO: str = "./mutedvideo.mp4"
+_VIDEO_OUTPUT_WITH_AUDIO: str = "./withaudiovideo.mp4"
+_VIDEO_OUTPUT_FINAL: str = "./finalvideo.mp4"
+_VIDEO_OUTPUT_FINAL_WITH_SRT: str = "./finalvideosubs.mp4"
 
-_CLOUD_PROJECT_LOCATION: Final[str] = "us-central1"
+_CLOUD_PROJECT_LOCATION: str = "us-central1"
 
 # https://cloud.google.com/text-to-speech/docs/voices
-_LANGUAGE: Final[str] = "en-US"
-_VOICE: Final[str] = "en-US-Neural2-F"
-_SSML_GENDER: Final[texttospeech.SsmlVoiceGender] = (
+_LANGUAGE: str = "en-US"
+_VOICE: str = "en-US-Neural2-F"
+_SSML_GENDER: texttospeech.SsmlVoiceGender = (
     texttospeech.SsmlVoiceGender.FEMALE
 )
 

@@ -10,15 +10,7 @@ This python based solution scrapes text and images from an existing news article
 
 
 ## Environment setup
-* Install the following python libraries (requirement.txt pending):
-
-    * pip3 install google-cloud-aiplatform
-    * pip3 install google-cloud-texttospeech
-    * pip3 install vertexai
-    * pip3 install google-cloud-speech
-    * pip3 install srt
-    * (and any other default package as needed for execution)
-
+* Install the requirement.txt libraries.
 * Install the gCloud CLI [Link](https://cloud.google.com/sdk/docs/install)
 * Set up GCP default client credentials [Link](https://cloud.google.com/docs/authentication/provide-credentials-adc)
 * Install the ffmpeg CLI: [Link](https://ffmpeg.org/download.html)

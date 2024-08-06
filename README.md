@@ -1,7 +1,7 @@
 # README
 
 ## Solution Description
-This python based solution scrapes text and images from an existing news article from a webpage, generates an AI summary, an Audio from the summary, and finally produces a video file (.mp4) which is a concatenation of the images with some visual effects.
+This is a python based solution which processes customer-provided text and image inputs to convert images and text into short form video formats. It generates an AI summary from the provided text content, an Audio from the summary, and finally produces a video file (.mp4) which is a concatenation of the provided images with some visual effects.
 
 ## Requirements
 * Google Cloud project with Google Cloud Storage, Vertex AI, and Text-to-Speech enabled APIs.

@@ -30,7 +30,7 @@ import glob
 import math
 import subprocess
 import vertexai
-from vertexai.language_models import TextGenerationModel
+from vertexai.generative_models import GenerativeModel
 from google.cloud import texttospeech
 from google.cloud import speech_v1
 import srt
@@ -55,12 +55,13 @@ _SSML_GENDER: texttospeech.SsmlVoiceGender = (
 )
 
 
-def _summarize_article(text_input_path: str, gcp: str) -> str:
+def _summarize_article(text_input_path: str, language:str, gcp: str) -> str:
   """Article summarization (spanish articles, change prompt if needed).
 
   Args:
     text_input_path: A string. Path of the text file containing the article
      to be summarized.
+    language (str): The language the article is in.
     gcp: A string. The Google cloud project.
 
   Returns:
@@ -69,34 +70,33 @@ def _summarize_article(text_input_path: str, gcp: str) -> str:
   with open(text_input_path, "r") as file:
     content = file.read()
     vertexai.init(project=gcp, location=_CLOUD_PROJECT_LOCATION)
-    parameters = {
-        "temperature": 0.2,
-        "max_output_tokens": 900,
-        "top_p": 0.8,
-        "top_k": 40,
-    }
-    model = TextGenerationModel.from_pretrained("text-bison@001")
-    response = model.predict(
-        "Crear un resumen del contenido del siguiente articulo "
-        "y tener en cuenta las siguientes restricciones:"
-        "1. El resumen debe de contener entre 400 y 600 palabras"
-        "2. El resumen NO debe mencionar al autor del articulo"
-        "3. El resumen debe comenzar con una frase que capte la atencion "
-        "del lector y que este relacionado con el contenido del articulo"
-        "4. El resumen debe terminar con una frase de conclusion "
-        "5. En caso de que el articulo contenga numeros o estadisticas deben "
-        "ser mencionadas en el resumen"
-        "6. El resumen debe contenter mas de 2 frases"
-        "7. El resumen debe contener un maximo de 6 frases"
-        "El siguiente es el articulo a resumir con las restricciones "
-        "mencionadas: "
+    generation_config = {
+            "max_output_tokens": 8192,
+            "temperature": 0.2,
+            "top_p": 0.8,
+            "top_k": 40,
+        }
+    model = GenerativeModel("gemini-1.5-pro-001")
+    response = model.generate_content(
+        "Summarize the content of the following article "
+        "according to the rules: \n"
+        "1. The summary must have between 300 and 600 words. \n"
+        "2. The summary must not mention the author's name. \n"
+        "3. The summary must start with a phrase that captures the attention of the audience "
+        " and is related to the content of the article. \n"
+        "4. The summary must end with a conclusion. \n"
+        "5. In the case that the article has numbers of statistics, they "
+        "should be mentioned in the summary. \n"
+        "6. The summary must have more than two phrases. \n"
+        "7. The summary must have less than six phrases. \n"
+        "8. The language for the article and for response is " + language + "\n"
+        "The article to be summarized is as follows: \n"
         + content,
-        **parameters
+        generation_config=generation_config
     )
     summary_text = response.text
     summary_text = summary_text.replace("*", "")
     return summary_text
-
 
 def _write_audio_file_from_text(summary_text: str) -> str:
   """Audio generation.
@@ -482,7 +482,7 @@ def main(in_args: object) -> str:
   Args:
     in_args: Arguments given for code execution.
   """
-  summary_text = _summarize_article(in_args.text_input_path, in_args.gcp_project)
+  summary_text = _summarize_article(in_args.text_input_path, in_args.language, in_args.gcp_project)
   _write_audio_file_from_text(summary_text)
   _generate_video_file_from_image_files(in_args.image_input_path)
 
@@ -494,6 +494,7 @@ if __name__ == "__main__":
   subparsers = parser.add_subparsers(dest="command")
   main_parser = subparsers.add_parser("genvideo", help=main.__doc__)
   main_parser.add_argument("-ti", "--text-input", dest="text_input_path")
+  main_parser.add_argument("-lang", "--language", dest="language_of_article")
   main_parser.add_argument("-ii", "--image-input", dest="image_input_path")
   main_parser.add_argument("-gcp", "--google-cloud-project", dest="gcp_project")
   args = parser.parse_args()

@@ -3,3 +3,4 @@ google-cloud-speech==2.26.1
 google-cloud-texttospeech==2.16.4
 srt==3.5.3
 vertexai==1.49.0
+pytruth==1.1.0

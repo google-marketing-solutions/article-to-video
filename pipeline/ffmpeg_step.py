@@ -14,7 +14,7 @@ class FfmpegStep(VideoGenerationStep):
     super().__init__(context)
     self.runner = runner
 
-  def _execute_ffmpeg_command(self, command: list[str]) -> str:
+  def execute_ffmpeg_command(self, command: list[str]) -> str:
     """Executes a ffmpeg command as a subprocess.
 
     Args:

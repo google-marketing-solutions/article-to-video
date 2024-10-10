@@ -10,14 +10,14 @@ class FfmpegStepTest(unittest.TestCase):
   class FakeFfmpegStep(FfmpegStep):
 
     def __call__(self, command: list[str]) -> str:
-      return self._execute_ffmpeg_command(command)
+      return self.execute_ffmpeg_command(command)
 
   def test_executes_subprocess_with_command(self):
     execution_result = mock.MagicMock()
     execution_result.returncode = 0
     runner = mock.MagicMock(return_value=execution_result)
     ffmpeg_step = self.FakeFfmpegStep(None, runner)
-    ffmpeg_step._execute_ffmpeg_command(["ffmpeg", "--help"])
+    ffmpeg_step.execute_ffmpeg_command(["ffmpeg", "--help"])
 
     runner.assert_called_once_with(
         "ffmpeg --help",
@@ -35,4 +35,4 @@ class FfmpegStepTest(unittest.TestCase):
     ffmpeg_step = self.FakeFfmpegStep(None, runner)
 
     with AssertThat(Exception).IsRaised():
-      ffmpeg_step._execute_ffmpeg_command(["ffmpeg", "--help"])
+      ffmpeg_step.execute_ffmpeg_command(["ffmpeg", "--help"])

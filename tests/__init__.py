@@ -6,4 +6,6 @@ from tests.pipeline.video_generation_context_test import VideoGenerationContextT
 from tests.pipeline.video_generation_pipeline_test import VideoGenerationPipelineTest
 from tests.text.generate_subtitles_step_test import GenerateSubtitlesStepTest
 from tests.video.add_logo_to_video_step_test import AddLogoToVideoStepTest
+from tests.video.add_title_to_video_step_test import AddTitleToVideoStepTest
 from tests.video.generate_video_from_images_step_test import GenerateVideoFromImagesStepTest
+from tests.video.text_video_utils_test import TextVideoUtilsTest

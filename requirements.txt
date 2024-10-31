@@ -4,6 +4,9 @@ google-cloud-texttospeech==2.16.4
 srt==3.5.3
 vertexai==1.49.0
 pytruth==1.1.0
+moviepy==1.0.3
+scipy==1.13.1
+sklearn==0.0
 flask==3.0.3
 pyyaml==6.0.2
 pillow==10.4.0

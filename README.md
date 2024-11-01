@@ -22,6 +22,12 @@ This is a python based solution which processes customer-provided text and image
 
 ## Execution
 
+### Server
+
+1. python3 -m flask --app video_generation_from_articles run
+
+### Standalone
+
 1. python3 ./video_generator.py "genvideo" -ti "./Nota.txt" -ii "." -gcp "project" (make sure to change the project as per the GCP project being used)
 
 ## Running tests

@@ -1,7 +1,9 @@
+import tempfile
 import unittest
 from unittest import mock
 
-from pipeline import video_generation_context
+from moviepy import editor
+import storyboarding
 from truth import truth
 from video import generate_video_from_images_step
 from video import video_generation_errors
@@ -9,85 +11,69 @@ from video import video_generation_errors
 
 class GenerateVideoFromImagesStepTest(unittest.TestCase):
 
-  _CONTEXT = video_generation_context.VideoGenerationContext(
-      {
-          'gcp_project': 'my_gcp_project',
-          'gcp_location': 'us_west',
-          'gcs_bucket_name': 'my_bucket_name',
-          'gcs_bucket_text_path': 'my_gcs_bucket_text_path',
-          'gcs_bucket_image_path': 'my_gcs_bucket_image_path',
-          'output_path': 'tests/video/generated/generate_video_from_images',
-      },
-      {'ken_burns': True},
-      '0218e40f-d722-4391-8ef7-47bbdaa29200',
-  )
-
   def test_raises_no_images_error_if_folder_contains_no_images(self):
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        self._CONTEXT
+        'output/path'
     )
-    execute_ffmpeg_command = mock.MagicMock()
-    step.execute_ffmpeg_command = execute_ffmpeg_command
     with truth.AssertThat(
         video_generation_errors.NoImagesFoundError
     ).IsRaised():
-      step(('/not/my/images/*', '/my/audio'))
+      step(storyboarding.Storyboard([], 'audio/path'))
 
-  def test_generates_video_from_images(self):
+  @mock.patch.object(editor, 'CompositeVideoClip', autospec=True)
+  @mock.patch.object(editor, 'ImageClip', autospec=True)
+  @mock.patch.object(editor, 'AudioFileClip', autospec=True)
+  def test_generates_video_from_images_returns_output_path(
+      self, mock_audio_file_clip, *_
+  ):
+    mock_audio_file_clip.return_value.duration = 45.0
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        self._CONTEXT
+        'output/path'
     )
-    execute_ffmpeg_command = mock.MagicMock()
-    step.execute_ffmpeg_command = execute_ffmpeg_command
-    with mock.patch('glob.glob') as glob_mock:
-      glob_mock.return_value = ['/my/images/1', '/my/images/2', '/my/images/3']
-      step(('/my/images/*', '/my/audio'))
+    storyboard = storyboarding.Storyboard(
+        scenes=[
+            storyboarding.Scene(
+                background_image_path='input_images/image1.jpg',
+                start_time=0,
+            ),
+            storyboarding.Scene(
+                background_image_path='input_images/image2.jpg',
+                start_time=24.5,
+            ),
+        ],
+        main_audio_path='/my/audio',
+    )
 
-    execute_ffmpeg_command.assert_called_with([
-        'ffmpeg',
-        '-i',
-        '/my/images/1',
-        '-i',
-        '/my/images/2',
-        '-i',
-        '/my/images/3',
-        '-filter_complex',
-        (
-            "\"[0:v]zoompan=z='min(zoom+0.0015,1.5)':d=33:s=1280x720,fade=t=out:st=0.3333333333333333:d=1[v0];"
-            "[1:v]zoompan=z='min(zoom+0.0015,1.5)':d=33:s=1280x720,fade=t=out:st=0.3333333333333333:d=1[v1];"
-            "[2:v]zoompan=z='min(zoom+0.0015,1.5)':d=33:s=1280x720,fade=t=out:st=0.3333333333333333:d=1[v2];"
-            '[v0][v1]xfade=transition=fade:duration=1:offset=-0.6666666666666667[v1];'
-            '[v1][v2]xfade=transition=fade:duration=1:offset=-0.3333333333333334[v2]"'
-        ),
-        '-map',
-        '[v2]',
-        '-c:v',
-        'libx264',
-        '-crf',
-        '23',
-        '-preset',
-        'medium',
-        '-pix_fmt',
-        'yuv420p',
-        '-r',
-        '25',
-        '-y',
-        'tests/video/generated/generate_video_from_images/0218e40f-d722-4391-8ef7-47bbdaa29200/5_mutedvideo.mp4',
-    ])
+    self.assertEqual(
+        step(storyboard),
+        'output/path',
+    )
 
   def test_runs_command_and_validates_golden(self):
+    tmp_output_dir = tempfile.TemporaryDirectory()
+
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        self._CONTEXT
+        tmp_output_dir.name + '5_withaudiovideo.mp4'
     )
 
-    result, _ = step((
-        'tests/video/goldens/generate_video_from_images/image*',
-        'tests/video/goldens/generate_video_from_images/audio.mp3',
-    ))
+    dir_root = 'tests/video/goldens/generate_video_from_images/'
+    scenes = [
+        storyboarding.Scene(i * 10, f'{dir_root}/image{i+1}.png')
+        for i in range(7)
+    ]
+    storyboard = storyboarding.Storyboard(
+        scenes=scenes,
+        main_audio_path=(
+            'tests/video/goldens/generate_video_from_images/audio.mp3'
+        ),
+    )
+
+    result = step(storyboard)
 
     files_equal = True
     with open(
-        'tests/video/goldens/generate_video_from_images/5_mutedvideo.mp4', 'rb'
+        'tests/video/goldens/generate_video_from_images/5_withaudiovideo.mp4',
+        'rb',
     ) as one:
       with open(result, 'rb') as two:
         chunk = other = True
@@ -98,3 +84,8 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
             files_equal = False
 
     truth.AssertThat(files_equal).IsTrue()
+    tmp_output_dir.cleanup()
+
+
+if __name__ == '__main__':
+  unittest.main()

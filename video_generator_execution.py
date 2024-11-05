@@ -22,10 +22,12 @@ It will generate a video out of the concatenated images and text summarization,
 Typical usage example:
 """
 
+import glob
 from audio import text_to_speech_step
 import pipeline
+import storyboarding
 from util import create_workdir_step
-from video import generate_video_from_images_step
+import video
 
 
 class VideoGeneratorExecution:
@@ -49,8 +51,12 @@ class VideoGeneratorExecution:
         .process(context.article_content)
     )
 
-    pipeline.VideoGenerationPipeline(context).add_steps(
-        generate_video_from_images_step.GenerateVideoFromImagesStep,
-    ).process((f"uploads/{context.video_id}/images/*", audio_path))
+    output_video_path = f"{context.workdir}/5_withaudiovideo.mp4"
+    pipeline.Pipeline.add_steps(
+        storyboarding.create_storyboard_step,
+        video.GenerateVideoFromImagesStep(
+            output_video_path, ken_burns=context.ken_burns
+        ),
+    ).process((glob.glob(f"uploads/{context.video_id}/images/*"), audio_path))
 
     return f"https://storage.googleapis.com/{context.gcs_bucket_name}/{context.video_id}.mp4"

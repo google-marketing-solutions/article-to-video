@@ -1,59 +1,39 @@
 """Video generation pipeline step for generating the base video from images."""
 
-import glob
-import math
+import logging
+from typing import TypedDict
+from moviepy import editor as mpy
 import pipeline
+import storyboarding
 from video import video_generation_errors
 
 
-class GenerateVideoFromImagesStep(pipeline.FfmpegStep):
+class Visual(TypedDict):
+  file_name: str
+  start_time: float
+
+
+class GenerateVideoFromImagesStep(pipeline.BaseStep):
   """Class that will stitch together the input images to generate base video."""
 
-  _OUTPUT_FILE: str = "5_mutedvideo.mp4"
-  _FPS: int = 25
-  _TARGET_RESOLUTION: str = "1280x720"
+  def __init__(
+      self,
+      output_path: str,
+      target_resolution: tuple[int, int] = (1280, 720),
+      fps: int = 25,
+      ken_burns: bool = True,
+  ):
+    self._logger = logging.getLogger(self.__class__.__name__)
+    self._output_path = output_path
+    self._target_resolution = target_resolution
+    self._fps = fps
+    self._ken_burns = ken_burns
 
-  def __init__(self, context: pipeline.VideoGenerationContext) -> None:
-    super().__init__(context)
-    self._workdir = context.workdir
-    self._ken_burns = context.ken_burns
-
-  def _get_audio_length(self, media_file: str) -> float:
-    """Calculates a media file length.
-
-    Args:
-        media_file: A string of the media files path.
-
-    Returns:
-        A float with the length in seconds.
-    """
-    ffmpeg_command = [
-        "ffprobe",
-        "-i",
-        media_file,
-        "-show_entries",
-        "format=duration",
-        "-v",
-        "quiet",
-        "-of",
-        'csv="p=0"',
-    ]
-
-    length_in_seconds = (
-        self.execute_ffmpeg_command(ffmpeg_command)
-        .replace("b", "")
-        .replace("n", "")
-        .replace("\\", "")
-        .replace("'", "")
-    )
-    return float(length_in_seconds)
-
-  def __call__(self, params: tuple[str, str]) -> str:
+  def process(self, storyboard: storyboarding.Storyboard) -> str:
     """Creates a video concatenating different images taken as input.
 
     Args:
-        params: Tuple containing the path of the source images to use in the
-          video as well as the path of the audio to be used in the video.
+        storyboard: The storyboard on which to base the generation.
 
     Returns:
         A string with the output file path.
@@ -62,65 +42,49 @@ class GenerateVideoFromImagesStep(pipeline.FfmpegStep):
         NoImagesFoundError: If the input path provided for the images contains
         no images.
     """
-    (images_glob, input_audio_path) = params
-    audio_file_length = self._get_audio_length(input_audio_path)
-    number_of_images = len(glob.glob(images_glob))
+    number_of_images = len(storyboard.scenes)
     if number_of_images == 0:
       raise video_generation_errors.NoImagesFoundError()
 
-    video_transition_effect = "fade"  # fade, slideright, circleopen, fadeblack
-    output_video_path = f"{self._workdir}/{self._OUTPUT_FILE}"
-    self.logger.info("Generating video output_video_path from:")
-    self.logger.info(f"\t{number_of_images} images located at {images_glob}")
-    self.logger.info(f"\tWith {audio_file_length}s duration.")
+    audio_clip = mpy.AudioFileClip(storyboard.main_audio_path)
+    audio_file_length = audio_clip.duration
 
-    each_image_duration = audio_file_length / number_of_images
+    self._logger.info("Generating video output_video_path from:")
+    self._logger.info("\t%i images:", number_of_images)
+    for scene in storyboard.scenes:
+      self._logger.info("\t-%s", scene.background_image_path)
+    self._logger.info("\tWith %s s duration", audio_file_length)
 
-    command = ["ffmpeg"]
-    filter_complex_string = ""
-
-    for i, image in enumerate(glob.glob(images_glob)):
-      command.extend(["-i", image])  # Add each image as an input to the command
-
+    clips = []
+    for i, scene in enumerate(storyboard.scenes):
+      clip_end_time = (
+          audio_file_length
+          if i + 1 == len(storyboard.scenes)
+          else storyboard.scenes[i + 1].start_time
+      )
+      clip = (
+          mpy.ImageClip(
+              scene.background_image_path,
+              duration=clip_end_time - scene.start_time + 1,
+          )
+          .resize(width=self._target_resolution[0])
+          .set_fps(self._fps)
+          .set_start(scene.start_time - 1)
+      )
       if self._ken_burns:
         # Apply the Ken Burns effect (zoom, pan, fade)
-        filter_complex_string += (
-            f"[{i}:v]zoompan=z='min(zoom+0.0015,1.5)':d={math.floor(self._FPS * (each_image_duration+1))}:s={self._TARGET_RESOLUTION},"
-            f"fade=t=out:st={each_image_duration}:d=1[v{i}];"
-        )
-      else:
-        filter_complex_string += (
-            f"[{i}:v]scale={self._TARGET_RESOLUTION},setsar=1[v{i}];"
-        )
+        clip = clip.resize(lambda t: min(1 + 0.0375 * t, 1.5)).crossfadein(1.0)
 
-    # Apply transitions between images
-    offset = each_image_duration - 1
-    for i in range(number_of_images - 1):
-      # Transition effect between image[i] and image[i+1]
-      filter_complex_string += f"[v{i}][v{i+1}]xfade=transition={video_transition_effect}:duration=1:offset={offset}[v{i+1}];"
-      offset += each_image_duration
+      clips.append(clip)
 
-    # Remove the trailing semicolon to avoid syntax errors
-    filter_complex_string = filter_complex_string.rstrip(";")
+    composite_video = mpy.CompositeVideoClip(
+        clips, size=self._target_resolution
+    ).set_audio(audio_clip)
+    composite_video.write_videofile(self._output_path)
 
-    command.extend([
-        "-filter_complex",
-        f'"{filter_complex_string}"',
-        "-map",
-        f"[v{number_of_images - 1}]",
-        "-c:v",
-        "libx264",
-        "-crf",
-        "23",
-        "-preset",
-        "medium",
-        "-pix_fmt",
-        "yuv420p",
-        "-r",
-        str(self._FPS),
-        "-y",
-        output_video_path,
-    ])
+    audio_clip.close()
+    composite_video.close()
+    for clip in clips:
+      clip.close()
 
-    self.execute_ffmpeg_command(command)
-    return (output_video_path, input_audio_path)
+    return self._output_path

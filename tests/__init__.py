@@ -1,6 +1,7 @@
 """Main tests module."""
 
 from tests.audio.convert_mp3_to_wav_step_test import ConvertMp3ToWavStepTest
+from tests.audio.text_to_speech_step import TextToSpeechStep
 from tests.pipeline.ffmpeg_step_test import FfmpegStepTest
 from tests.pipeline.video_generation_context_test import VideoGenerationContextTest
 from tests.pipeline.video_generation_pipeline_test import VideoGenerationPipelineTest

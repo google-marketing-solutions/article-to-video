@@ -5,6 +5,12 @@ import os
 import time
 import uuid
 import flask
+import pipeline
+from video import video_generation_errors
+import video_generator_execution
+import yaml
+
+config = yaml.safe_load(open('config.yml'))
 
 logging.basicConfig(level=logging.INFO)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
@@ -72,3 +78,32 @@ def upload_file(video_id: str):
   file.save(upload_path)
 
   return flask.jsonify({'file': image_file})
+
+
+@app.route('/video/<video_id>/generate', methods=['POST'])
+def generate_video(video_id: str):
+  """Generates a video with given inputs.
+
+  Args:
+      video_id: Id of the video currently being generated.
+
+  Returns:
+      JSON with the path to the file generated.
+  """
+  data = flask.request.get_json()
+  try:
+    context = pipeline.VideoGenerationContext(config, data, video_id)
+    print(context.article_content)
+    video_uri = video_generator_execution.VideoGeneratorExecution().genvideo(
+        context
+    )
+    return flask.jsonify({
+        'status': 'Your video has been generated successfully',
+        'path': video_uri,
+    })
+  except video_generation_errors.NoImagesFoundError:
+    return flask.jsonify(
+        {'status': 'Not enought suitable images found in article'}
+    )
+  except Exception:  # pylint: disable=broad-exception-caught
+    return flask.jsonify({'status': 'Unknown error generating your video.'})

@@ -1,11 +1,11 @@
 """Main tests module."""
 
 from tests.audio.convert_mp3_to_wav_step_test import ConvertMp3ToWavStepTest
-from tests.audio.text_to_speech_step import TextToSpeechStep
+from tests.audio.text_to_speech_step_test import TextToSpeechStepTest
 from tests.pipeline.ffmpeg_step_test import FfmpegStepTest
 from tests.pipeline.video_generation_context_test import VideoGenerationContextTest
 from tests.pipeline.video_generation_pipeline_test import VideoGenerationPipelineTest
-from tests.text.generate_subtitles_step_test import GenerateSubtitlesStepTest
+from tests.util.create_workdir_step_test import CreateWorkdirStepTest
 from tests.video.add_logo_to_video_step_test import AddLogoToVideoStepTest
 from tests.video.add_title_to_video_step_test import AddTitleToVideoStepTest
 from tests.video.generate_video_from_images_step_test import GenerateVideoFromImagesStepTest

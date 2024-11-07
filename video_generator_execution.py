@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+# Copyright 2024 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Generates a narrated video with subtitles from news articles and images.
+
+This is a standalone script which takes as input an article text in .txt
+ format and pictures (each with the same prefix plus a number starting from 0).
+It will generate a video out of the concatenated images and text summarization,
+ along with narrated audio and srt subtitles.
+Typical usage example:
+"""
+
+from audio import text_to_speech_step
+import pipeline
+from util import create_workdir_step
+from video import generate_video_from_images_step
+
+
+class VideoGeneratorExecution:
+  """Class representing one execution of the video generator pipeline."""
+
+  def genvideo(self, context: pipeline.VideoGenerationContext) -> str:
+    """Main function containing helper function execution.
+
+    Args:
+      context: Arguments given for code execution.
+
+    Returns:
+      Path to the uploaded video file.
+    """
+    audio_path, _ = (
+        pipeline.VideoGenerationPipeline(context)
+        .add_steps(
+            create_workdir_step.CreateWorkdirStep,
+            text_to_speech_step.TextToSpeechStep,
+        )
+        .process(context.article_content)
+    )
+
+    pipeline.VideoGenerationPipeline(context).add_steps(
+        generate_video_from_images_step.GenerateVideoFromImagesStep,
+    ).process((f"uploads/{context.video_id}/images/*", audio_path))
+
+    return f"https://storage.googleapis.com/{context.gcs_bucket_name}/{context.video_id}.mp4"

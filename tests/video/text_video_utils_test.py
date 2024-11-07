@@ -6,6 +6,7 @@ from video import text_video_utils
 
 
 class TextVideoUtilsTest(unittest.TestCase):
+
   def test_get_main_color(self):
     # Create a test image that is predominantly red
     red_image = Image.new("RGB", (200, 200), (255, 0, 0))

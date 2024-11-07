@@ -1,0 +1,6 @@
+gcp_project: "scramble-atv"
+gcp_location: "us-central1"
+output_path: "./output"
+gcs_bucket_name: "scramble-atv-gcs"
+gcs_bucket_text_path: "text"
+gcs_bucket_image_path: "images"

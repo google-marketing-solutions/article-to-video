@@ -1,11 +1,12 @@
 """Abstract representation of a step in the video generation pipeline."""
 
-import abc
 import logging
+from typing import Any
+from pipeline import base
 from pipeline.video_generation_context import VideoGenerationContext
 
 
-class VideoGenerationStep(abc.ABC):
+class VideoGenerationStep(base.BaseStep[tuple[Any, ...], Any]):
   """Abstract representation of a step in the video generation pipeline.
 
   This class is supposed to be used as a base class for all the intermediate
@@ -22,13 +23,8 @@ class VideoGenerationStep(abc.ABC):
     self.logger = logging.getLogger(self.__class__.__name__)
     self.context = context
 
-  @abc.abstractmethod
-  def __call__(self, previous_step_results):
-    """Executes the current step in the pipeline.
-
-    Args:
-        previous_step_results: Usually the path of the generated file from
-          previous step, but can be a tuple of values, depending on how many
-          previous steps results the current step depends on.
-    """
-    pass
+  def process(self, initial_value=None):
+    # Ideally, the process function would be implemented here, but the original
+    # implementation overrides __call__ directly so doing it this way ensures
+    # backwards compatibility with previously created steps.
+    self.__call__(initial_value)

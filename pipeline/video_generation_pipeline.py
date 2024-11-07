@@ -1,12 +1,13 @@
 """Pipeline for generating videos."""
 
-import functools
+from typing import Self
 
+from pipeline import base
 from pipeline.video_generation_context import VideoGenerationContext
 from pipeline.video_generation_step import VideoGenerationStep
 
 
-class VideoGenerationPipeline:
+class VideoGenerationPipeline(base.Pipeline):
   """Pipeline for generating videos.
 
   Typical usage would be:
@@ -22,8 +23,9 @@ class VideoGenerationPipeline:
           generation steps.
     """
     self.context = context
+    self.steps: list[VideoGenerationStep] = []
 
-  def add_steps(self, *steps: VideoGenerationStep):
+  def add_steps(self, *steps: VideoGenerationStep) -> Self:
     """Adds video generation steps in the video generation pipeline.
 
     This method initialized an instance of each step by providing it with the
@@ -35,17 +37,5 @@ class VideoGenerationPipeline:
     Returns:
         This object, to facilitate chaining calls.
     """
-    self.steps = [step(self.context) for step in steps]
+    self.steps.extend([step(self.context) for step in steps])
     return self
-
-  def process(self, initial_value=None):
-    """Generates the video by running each of the provided steps in order.
-
-    Args:
-        initial_value: Value to be provided as the "previous_step_results" for
-          the first step in the pipeline
-
-    Returns:
-        Result from the last step executed.
-    """
-    return functools.reduce(lambda a, b: b(a), self.steps, initial_value)

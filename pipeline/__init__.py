@@ -1,5 +1,8 @@
 """Module for base classes for the video generation pipeline."""
 
+from .base import Args
+from .base import BaseStep
+from .base import Pipeline
 from .ffmpeg_step import FfmpegStep
 from .video_generation_context import VideoGenerationContext
 from .video_generation_pipeline import VideoGenerationPipeline

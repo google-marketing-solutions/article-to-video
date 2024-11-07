@@ -1,7 +1,7 @@
 import os
 import unittest
 from unittest import mock
-import audio
+from audio import text_to_speech_step
 import pipeline
 
 
@@ -15,7 +15,7 @@ class TextToSpeechStepTest(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
-    self.context = pipeline.atv_pipeline_step_context.AtvPipelineStepContext(
+    self.context = pipeline.VideoGenerationContext(
         {
             "workdir": "tests/audio/generated",
             "gcp_project": "somegcpproject",
@@ -35,7 +35,7 @@ class TextToSpeechStepTest(unittest.TestCase):
       self, mock_text_to_speech_client
   ):
     """Test that single-voice audio is generated and saved correctly."""
-    step = audio.text_to_speech_step.TextToSpeechStep(self.context)
+    step = text_to_speech_step.TextToSpeechStep(self.context)
     summary_text = "Hello world"
     mock_client = mock_text_to_speech_client.return_value
     mock_client.synthesize_speech.return_value.audio_content = (
@@ -58,7 +58,7 @@ class TextToSpeechStepTest(unittest.TestCase):
       self, mock_text_to_speech_client
   ):
     """Test that multi-voice audio is generated and saved correctly."""
-    step = audio.text_to_speech_step.TextToSpeechStep(self.context)
+    step = text_to_speech_step.TextToSpeechStep(self.context)
     multivoice_transcript = {
         "narration": [
             {"name": "Anchor 1", "statement": "Hello"},

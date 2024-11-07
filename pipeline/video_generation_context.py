@@ -155,3 +155,5 @@ class VideoGenerationContext:
     self.sentiment = request_params.get('sentiment', False)
     self.video_overlay = request_params.get('video_overlay', False)
     self.title = request_params.get('title', False)
+    self.article_content = request_params.get('article_content', False)
+    self.multivoice = request_params.get('multivoice', False)

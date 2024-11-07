@@ -8,7 +8,7 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 
 
-class TextToSpeechStep(pipeline.AtvPipelineStep):
+class TextToSpeechStep(pipeline.VideoGenerationStep):
   """Pipeline step for converting text to speech with single or multi-voice synthesis."""
 
   _LANGUAGE_MAPPINGS = {
@@ -33,7 +33,7 @@ class TextToSpeechStep(pipeline.AtvPipelineStep):
 
   _OUTPUT_AUDIO_FILE = "2_readaloud.mp3"
 
-  def __init__(self, context: pipeline.AtvPipelineStepContext):
+  def __init__(self, context: pipeline.VideoGenerationContext):
     super().__init__(context)
     self.workdir = context.workdir
     self.gcp_project = context.gcp_project

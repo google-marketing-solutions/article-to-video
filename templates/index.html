@@ -82,7 +82,7 @@
                   </div>
                   <input type="file" id="myFile" name="file" />
                   <input type="button" value="Upload" onclick="uploadFile()" />
-                  <textarea id="articleText" name="articleText" rows="4"
+                  <textarea id="article_content" name="article_content" rows="4"
                     cols="50">Enter your article text here.</textarea>
                 </div>
 
@@ -304,7 +304,7 @@
             }
 
             const formData = {
-              scrape_url: document.getElementById('article_url').value,
+              article_content: document.getElementById('article_content').value,
               burned_in_subtitles: document.getElementById('burned_in_subtitles').checked,
               // stockFootage: document.getElementById('stockFootage').checked,
               ken_burns: document.querySelector('input[name="image_effect"]:checked').value === 'ken_burns',
@@ -325,7 +325,7 @@
             videoContainer.style.display = 'none'; // Hide the video while generating
 
             // Simulate fetching the video generation (replace with actual fetch request)
-            fetch('/generate_video', {
+            fetch('/video/' + videoId + '/generate', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'

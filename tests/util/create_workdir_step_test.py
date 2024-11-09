@@ -22,8 +22,6 @@ class CreateWorkdirStepTest(unittest.TestCase):
 
   def test_create_dir_correctly(self):
     step = create_workdir_step.CreateWorkdirStep(self.context)
-    execute_ffmpeg_command = mock.MagicMock()
-    step.execute_ffmpeg_command = execute_ffmpeg_command
     with mock.patch("os.makedirs") as m:
       step("")
       m.assert_called_once_with(

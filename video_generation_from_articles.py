@@ -93,7 +93,6 @@ def generate_video(video_id: str):
   data = flask.request.get_json()
   try:
     context = pipeline.VideoGenerationContext(config, data, video_id)
-    print(context.article_content)
     video_uri = video_generator_execution.VideoGeneratorExecution().genvideo(
         context
     )

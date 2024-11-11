@@ -104,3 +104,4 @@ class Storyboard:
   main_audio_path: str
   background_audio_path: Optional[str] = None
   text_overlays: list[TextOverlay] = dataclasses.field(default_factory=list)
+  logo_path: Optional[str] = None

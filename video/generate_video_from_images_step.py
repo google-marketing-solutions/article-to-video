@@ -9,6 +9,8 @@ import storyboarding
 from video import video_generation_errors
 from video.create_text_overlay_step import (create_text_overlay_video_clip)
 
+_LOGO_MARGIN = 16  # pixels
+
 
 class GenerateVideoFromImagesStep(pipeline.BaseStep):
   """Class that will stitch together the input images to generate base video."""
@@ -162,6 +164,14 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
           video_width, video_height, text_overlay_obj
       )
       clips.append(text_overlay_video_clip)
+
+    if storyboard.logo_path:
+      clips.append(
+          mpy.ImageClip(storyboard.logo_path, duration=audio_clip.duration)
+          .resize(width=50)
+          .set_pos(("right", "top"))
+          .margin(right=_LOGO_MARGIN, top=_LOGO_MARGIN, opacity=0)
+      )
 
     composite_video = mpy.CompositeVideoClip(
         clips, size=self._target_resolution

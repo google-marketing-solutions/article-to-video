@@ -77,6 +77,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
         main_audio_path=(
             'tests/video/goldens/generate_video_from_images/audio.mp3'
         ),
+        logo_path='tests/video/goldens/generate_video_from_images/favicon.ico',
     )
 
     result = step(storyboard)

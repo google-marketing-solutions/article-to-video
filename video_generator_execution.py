@@ -23,6 +23,7 @@ Typical usage example:
 """
 
 import glob
+from audio import subtitles_generation_step
 from audio import text_to_speech_step
 import pipeline
 import storyboarding
@@ -47,6 +48,7 @@ class VideoGeneratorExecution:
         .add_steps(
             create_workdir_step.CreateWorkdirStep,
             text_to_speech_step.TextToSpeechStep,
+            subtitles_generation_step.SubtitlesGenerationStep,
         )
         .process(context.article_content)
     )

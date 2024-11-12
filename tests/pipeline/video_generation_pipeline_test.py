@@ -11,16 +11,24 @@ class VideoGenerationPipelineTest(unittest.TestCase):
     def __call__(self, previous_step_results):
       return previous_step_results + 2
 
-  class FakeStepMultiplyByFour(VideoGenerationStep):
+  class FakeStepSplitIntoTuple(VideoGenerationStep):
 
     def __call__(self, previous_step_results):
-      return previous_step_results * 4
+      return previous_step_results, previous_step_results
+
+  class FakeStepAddTogether(VideoGenerationStep):
+
+    def __call__(self, previous_step_results):
+      return previous_step_results[0] + previous_step_results[1]
 
   def test_steps_are_executed_in_order(self):
     result = (
         VideoGenerationPipeline(None)
-        .add_steps(self.FakeStepAddTwo, self.FakeStepMultiplyByFour)
+        .add_steps(
+            self.FakeStepAddTwo,
+            self.FakeStepSplitIntoTuple,
+            self.FakeStepAddTogether,
+        )
         .process(1)
     )
-
-    AssertThat(result).IsEqualTo(12)
+    AssertThat(result).IsEqualTo(6)

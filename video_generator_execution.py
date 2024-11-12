@@ -28,6 +28,7 @@ from audio import text_to_speech_step
 import pipeline
 import storyboarding
 from util import create_workdir_step
+import vertexai
 import video
 
 
@@ -43,6 +44,8 @@ class VideoGeneratorExecution:
     Returns:
       Path to the uploaded video file.
     """
+    vertexai.init(project=context.gcp_project, location=context.gcp_location)
+
     audio_path, _ = (
         pipeline.VideoGenerationPipeline(context)
         .add_steps(
@@ -59,6 +62,10 @@ class VideoGeneratorExecution:
         video.GenerateVideoFromImagesStep(
             output_video_path, ken_burns=context.ken_burns
         ),
-    ).process((glob.glob(f"uploads/{context.video_id}/images/*"), audio_path))
+    ).process(
+        image_paths=glob.glob(f"uploads/{context.video_id}/images/*"),
+        main_audio_path=audio_path,
+        srt_path="[SRT PATH PLACEHOLDER]",
+    )
 
     return f"https://storage.googleapis.com/{context.gcs_bucket_name}/{context.video_id}.mp4"

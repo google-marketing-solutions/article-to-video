@@ -1,0 +1,16 @@
+<mat-card-header>
+    <mat-card-subtitle>
+        Watching video: {{videoUri}}
+    </mat-card-subtitle>
+</mat-card-header>
+
+<mat-card-content>
+    @if (videoUri != "") {
+        <video id="videoPlayer" width="640" height="360" controls>
+            <source src="{{videoUri}}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+    } @else {
+        <span>No video loaded.</span>
+    }
+</mat-card-content>

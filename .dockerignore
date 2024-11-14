@@ -1,0 +1,10 @@
+__pycache__/
+venv/
+atvenv/
+output/
+vgfa/
+uploads/
+.dockerignore
+.gcloudignore
+.gitignore
+node_modules

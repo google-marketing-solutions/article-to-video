@@ -20,7 +20,7 @@ app = flask.Flask(__name__)
 
 @app.route('/')
 def index():
-  return flask.render_template('index.html')
+  return flask.send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
 
 
 @app.route('/favicon.ico')
@@ -71,7 +71,7 @@ def upload_file(video_id: str):
     )
 
   folder = f'uploads/{video_id}/images'
-  image_file = f'{int(time.time())}.{extension}'
+  image_file = f'{int(time.time() * 10000000)}.{extension}'
 
   os.makedirs(folder, exist_ok=True)
   upload_path = os.path.join(folder, image_file)
@@ -93,7 +93,6 @@ def generate_video(video_id: str):
   data = flask.request.get_json()
   try:
     context = pipeline.VideoGenerationContext(config, data, video_id)
-    print(context.article_content)
     video_uri = video_generator_execution.VideoGeneratorExecution().genvideo(
         context
     )

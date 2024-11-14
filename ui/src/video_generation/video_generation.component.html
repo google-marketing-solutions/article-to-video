@@ -1,0 +1,44 @@
+<mat-card-header>
+    <mat-card-subtitle>
+        Generating video: {{videoId}}
+    </mat-card-subtitle>
+</mat-card-header>
+
+<mat-card-content>
+    @if (videoId != "") {
+    <mat-stepper orientation="vertical" #stepper>
+        <mat-step>
+            <ng-template matStepLabel>Enter the text of the article</ng-template>
+            <article-text-input (textChanged)="textChanged($event)" />
+            <div>
+                <button mat-button matStepperNext>Next</button>
+            </div>
+        </mat-step>
+        <mat-step>
+            <ng-template matStepLabel>Upload article images</ng-template>
+            <article-images-upload [videoId]="videoId" />
+            <div>
+                <button mat-button matStepperPrevious>Back</button>
+                <button mat-button matStepperNext>Next</button>
+            </div>
+        </mat-step>
+        <mat-step>
+            <ng-template matStepLabel>Select additional options</ng-template>
+            <article-options-select (optionsChanged)="articleOptionsChanged($event)" />
+            <div>
+                <button mat-button matStepperPrevious>Back</button>
+                <button mat-button matStepperNext>Next</button>
+            </div>
+        </mat-step>
+        <mat-step>
+            <ng-template matStepLabel>Generate Video</ng-template>
+            <div>
+                <button mat-flat-button (click)="generateVideo()">Generate!</button>
+                <button mat-button (click)="stepper.reset()">Reset</button>
+            </div>
+        </mat-step>
+    </mat-stepper>
+    } @else {
+    <mat-spinner></mat-spinner>
+    }
+</mat-card-content>

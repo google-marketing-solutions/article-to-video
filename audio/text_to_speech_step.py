@@ -4,6 +4,7 @@ import json
 from typing import Dict, Tuple
 from google.cloud import texttospeech_v1beta1 as texttospeech
 import pipeline
+from util import gcs_utils
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
@@ -40,6 +41,8 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
     self.gcp_location = context.gcp_location
     self.language = context.language
     self.multivoice = context.multivoice
+    self.gcs_bucket_name = context.gcs_bucket_name
+    self.video_id = context.video_id
 
   def __call__(self, summary_text: str) -> Tuple[str, str]:
     """Generate audio for the provided summary text, single or multi-voice.
@@ -58,7 +61,12 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
       return audio_path, textoutput_content
 
     audio_path = self.generate_single_voice(summary_text)
-    return audio_path, summary_text
+    audio_gcs_uri = gcs_utils.upload_to_gcs(
+        audio_path,
+        self.gcs_bucket_name,
+        f"{self.video_id}/{self._OUTPUT_AUDIO_FILE}",
+    )
+    return audio_path, audio_gcs_uri, summary_text
 
   def generate_single_voice(self, summary_text: str) -> str:
     """Generate single-voice audio for the provided text.

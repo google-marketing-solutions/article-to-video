@@ -3,6 +3,7 @@ import unittest
 from unittest import mock
 from audio import text_to_speech_step
 import pipeline
+from util import gcs_utils
 
 
 class TextToSpeechStepTest(unittest.TestCase):
@@ -41,7 +42,6 @@ class TextToSpeechStepTest(unittest.TestCase):
     mock_client.synthesize_speech.return_value.audio_content = (
         b"fake_audio_data"
     )
-
     with mock.patch("builtins.open", mock.mock_open()) as mocked_file:
       audio_path = step.generate_single_voice(summary_text)
 
@@ -69,7 +69,6 @@ class TextToSpeechStepTest(unittest.TestCase):
     mock_client.synthesize_speech.return_value.audio_content = (
         b"fake_audio_data"
     )
-
     with mock.patch("builtins.open", mock.mock_open()) as mocked_file:
       audio_path = step.generate_multivoice_audio(multivoice_transcript)
 

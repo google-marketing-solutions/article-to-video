@@ -78,3 +78,7 @@ class TextToSpeechStepTest(unittest.TestCase):
       self.assertEqual(
           srt_text[1], "tests/audio/generated/somevideoid/subtitles.srt"
       )
+
+
+if __name__ == "__main__":
+  unittest.main()

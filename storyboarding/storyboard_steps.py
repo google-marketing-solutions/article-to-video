@@ -8,13 +8,12 @@ from storyboarding.model import TextOverlay
 from vertexai import generative_models
 
 
-def serialize_scenes(scenes: list[storyboarding.Scene]) -> str:
+def serialize_scenes(scenes: list[storyboarding.ImageScene]) -> str:
   """Convert scenes into a string format for inclusion in the Gemini prompt."""
   serialized_scenes = []
   for scene in scenes:
     serialized_scenes.append(
-        f"Scene start_time: {scene.start_time}, "
-        f"background_image_path: {scene.background_image_path}"
+        f"Scene start_time: {scene.start_time}, image_path: {scene.image_path}"
     )
   return "\n".join(serialized_scenes)
 
@@ -184,6 +183,158 @@ def create_text_overlays(
   ]
 
 
+def _describe_images(image_file_paths: list[str]) -> str:
+  """Describes images for create_scenes method.
+
+  Returns a human readable description and two bounding boxes for each imes.
+
+  Args:
+    image_file_paths: The images to describe.
+
+  Returns:
+     A human readable description and two bounding boxes for each image.
+     One bounding box around the main subject of the image and another around
+     the focal point. The list is organized by the file name.
+  """
+  prompt = textwrap.dedent("""\
+    You are a highly advanced computer vision system working for a stock photo
+    provider. Your primary objective is to analyze images and provide detailed
+    descriptions along with precise bounding box coordinates.  You will receive
+    images encoded as base64 strings, and identified by their filenames.
+
+    Input:
+    - Image List: A list of images, identified by their file paths that need to
+    be analyzed.
+
+    Output:
+    For each image, generate the following:
+    - description: A detailed description of the image, mentioning prominent
+    objects, people, activities, setting, and overall mood. Be objective and
+    avoid subjective interpretations. Focus on factual details and avoid
+    creative writing.
+    - main subject bounding box: Bounding box around the primary subject of the
+    image with a description [ymin, xmin, ymax, xmax]
+    - focal point bounding box: Bounding box around the focal point of the image
+    with a description [ymin, xmin, ymax, xmax]
+
+    Guidelines:
+    - Accuracy: Bounding boxes must accurately encompass the intended regions.
+    ymin, xmin, ymax, and xmax values should be normalized ints between 0 and
+    1000, representing the fraction of the image's height and width. (0,0)
+    corresponds to the top-left corner.
+    - Objectivity: Descriptions should be factually accurate and avoid
+    subjective interpretations, opinions, or assumptions about the image's
+    meaning or purpose. Stick to observable details. Avoid phrases like "looks
+    like," "appears to be," "might be," etc.
+    - Detail: Descriptions should be as detailed as possible, encompassing all
+    significant elements within the image. Include details about objects, people
+    (if any), activities, setting, lighting, and overall mood conveyed by the
+    image. Be specific with object descriptions (e.g., "red leather armchair"
+    instead of just "chair").
+    - Conciseness: While detailed, descriptions should be concise and avoid
+    unnecessary verbosity.
+    - No Image URLs: Do not attempt to generate URLs or access external
+    resources. All necessary information is contained within the base64 encoded
+    image.
+
+    Focal Point vs. Main Subject: The **main subject** is the overall dominant
+    element in the image, the core "thing" the picture is about. The **focal
+    point** is a specific area within or near the main subject that draws the
+    viewer's immediate attention and serves as a visual anchor.
+
+    1. Single Person Portrait:
+    - Main Subject: The entire person.
+    - Focal Point: The person's face, specifically the eyes.
+
+    2. Group of People:
+    - Main Subject: The group as a whole.
+    - Focal Point:  A cluster encompassing as many faces as possible. If one
+    person is clearly central or interacting, prioritize their face.
+
+    3. Landscape/Nature Scene:
+    - Main Subject: The overall scene (e.g., a mountain range, forest,
+    seascape).
+    - Focal Point: Look for elements that create a strong visual impact:
+      * Leading Lines: Where do lines (roads, rivers, fences) converge?
+      * Rule of Thirds: Are any key elements positioned at the intersection
+        points of a 3x3 grid overlay?
+      * Contrast: Is there an area of high contrast (light vs. dark, color
+        difference) that draws the eye?
+      * Unique Elements: A solitary tree, a distinctive rock formation, a
+        waterfall.
+
+    4. Object Photography (Still Life/Product):
+    - Main Subject: The object itself.
+    - Focal Point: A key detail or feature that highlights the object's design,
+      texture, or function. For example:
+      * A logo on a product.
+      * A unique texture or pattern.
+      * A point of reflection or highlight.
+
+    5. Architectural Images:
+    - Main Subject: The building or structure.
+    - Focal Point: Consider:
+      * Entrance/Doorway: Often a natural point of entry and interest.
+      * Distinctive Architectural Features: Towers, arches, unique window
+        designs.
+      * Lines and Perspective: Leading lines or strong perspective points.
+
+    6. Action/Sports Shots:
+    - Main Subject: The person or object in motion.
+    - Focal Point:  Typically the face of the athlete or the point of action
+      (e.g., a ball, a point of contact). Consider the direction of movement –
+      the focal point should anticipate or follow the action.
+
+    7. Abstract Images:
+    - Main Subject:  The overall composition of shapes, colors, and textures.
+    - Focal Point: Can be more subjective but look for:
+      * Areas of high contrast or visual weight.
+      * Patterns that lead the eye.
+      * A central element or anomaly.
+
+    Additional Considerations:
+    - Depth of Field: If the image has a shallow depth of field (blurry
+      background), the in-focus area is likely the focal point.
+    - Lighting: Brightly lit areas often draw the eye more effectively.
+    - Context: Consider the story or message the image conveys. The focal
+      point should reinforce that narrative.
+    - The focal point should be as small as is realistically possible.
+
+    **Example**
+
+    Image List:
+    /path/to/image/dog.jpg:
+    [image]
+    /path/to/image/garden.jpg:
+    [image]
+
+    Output:
+    /path/to/image/dog.jpg:
+    - Description: A brown dog with white paws sits on a green grassy field. The
+    dog is facing the camera and has its tongue slightly out. The background
+    includes a blue sky with a few scattered white clouds. A small red ball lies
+    near the dog's front paws.
+    - Main Subject Bounding Box: The main subject is the dog [ymin, xmin, ymax,
+      xmax]
+    - Focal Point Bounding Box: The focal point is the dog's eyes [ymin, xmin,
+    ymax, xmax]
+
+    /path/to/image/garden.jpg:
+    - Description: A close-up of a blooming red rose. The petals are velvety and
+    slightly unfurled. Water droplets cling to the petals. The background is a
+    blurred green foliage.
+    - Main Subject Bounding Box: The entire rose, including the stem [ymin,
+      xmin, ymax, xmax]
+    - Focal Point Bounding Box: The rose petals and bud [ymin, xmin, ymax, xmax]
+  """)
+  model = generative_models.GenerativeModel("gemini-1.5-pro-002")
+  image_parts = ["Image List:"]
+  for path in image_file_paths:
+    image_parts.extend([path, generative_models.Image.load_from_file(path)])
+  response = model.generate_content([prompt, *image_parts])
+  return response.text
+
+
 def create_scenes(
     image_file_paths: list[str], srt_file_path: str
 ) -> list[storyboarding.Scene]:
@@ -201,7 +352,7 @@ def create_scenes(
     Your task is to analyze a provided SRT file (containing timestamps and
     transcribed narration) and a list of image files. Based on the SRT file's
     content, you will determine the most appropriate images to accompany the
-    narration and generate a schedule for their display.
+    narration and generate a schedule to display the images.
 
     Input:
     - SRT Contents: The SRT contains timestamps and the corresponding narration
@@ -210,14 +361,40 @@ def create_scenes(
     included in the slideshow.
 
     Output:
-    - Produce a list of image file paths along with timestamps indicating when
-    each image should appear in the slideshow. These timestamps should align
-    logically with the narration in the SRT file.
-    - You may repeat images if it makes sense to do so.
-    - Space the image start times out as much as possible. For a 30 second
-    slideshow with 3 images, having cues at 0, 10, 20 is better than 0, 2, 6.
-    - Any images that are irrelevant to the SRT file's content should be
-    omitted.
+    A structured list specifying the following for each image in the slideshow:
+    - File Path: The complete path to the image file.
+    - Start Time (Timestamp): The precise time (in the same format as the SRT
+      timestamps) when the image should appear. This timestamp should align
+      logically with the narration in the SRT file.
+    - Bounding Boxes: Two bounding boxes associated with the image (if
+      provided).
+    - Justification for Start Time: Describe your reasoning for choosing the
+    specific start time you choose. Does the image content align with an SRT
+    cue, is it being placed to make sure the slideshow elements are evenly
+    spaced, or some other reason.
+
+    Instructions:
+    1. Logical Alignment: Prioritize aligning image timestamps with the content
+    of the SRT cues. If an image directly illustrates a specific subtitle, its
+    timestamp should match that subtitle's start time.
+    2. Thematic Images: You can include images that thematically relate to the
+    overall content of the SRT file, even if they don't perfectly match a
+    specific subtitle.
+    3. Uniform Distribution of Thematic Images:  *Crucially*, for thematic
+    images that don't align with specific SRT queues, distribute them **evenly
+    across the entire duration** of the SRT file. Calculate the total duration
+    of the SRT file and divide it into equal segments for placing these thematic
+    images. For instance, if the SRT file is 60 seconds long and you have 3
+    thematic images, place them at approximately 20, 40, and 60 seconds. Do not
+    have any images start after the last entry in the SRT file.
+    4. Maximize Spacing: Regardless of whether an image aligns directly with an
+    SRT queue or is thematic, ensure that the image start times are spaced as
+    far apart as possible within the overall SRT duration. **Avoid clustering
+    images at the beginning.**
+    5. The minimum time between images should be about 5 seconds. Prefer at
+    least ~10 seconds between cues.
+    6. Relevance: Only include images that are relevant to the content of the
+    SRT file. Omit irrelevant images.
 
     **Example**
 
@@ -228,23 +405,35 @@ def create_scenes(
 
     Image List:
     /path/to/image/cat.jpg:
-    [image]
+    - Description: [description]
+    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
     /path/to/image/garden.jpg:
-    [image]
+    - Description: [description]
+    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
     /path/to/image/butterfly.jpg:
-    [image]
+    - Description: [description]
+    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
     /path/to/image/dog.jpg:
-    [image]
+    - Description: [description]
+    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
 
     Output:
     00:00:00,000 /path/to/image/cat.jpg
+    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
     00:00:05,000 /path/to/image/garden.jpg
+    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
     00:00:10,000 /path/to/image/butterfly.jpg
+    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
   """)
-  model = generative_models.GenerativeModel("gemini-1.5-pro-001")
-  image_parts = ["Image List:"]
-  for p in image_file_paths:
-    image_parts.extend([p, generative_models.Image.load_from_file(p)])
+  model = generative_models.GenerativeModel("gemini-1.5-pro-002")
+  image_parts = ["Image List:", _describe_images(image_file_paths)]
   with open(srt_file_path, "r", encoding="utf-8") as srt_file:
     srt_parts = ["SRT Contents:", srt_file.read()]
 
@@ -254,13 +443,26 @@ def create_scenes(
           "type": "object",
           "properties": {
               "start_time": {"type": "number"},
-              "background_image_path": {"type": "string"},
+              "image_path": {"type": "string"},
+              "main_subject": {
+                  "type": "array",
+                  "items": {"type": "number"},
+              },
+              "focal_point": {
+                  "type": "array",
+                  "items": {"type": "number"},
+              },
           },
-          "required": ["start_time", "background_image_path"],
+          "required": [
+              "start_time",
+              "image_path",
+              "main_subject",
+              "focal_point",
+          ],
       },
   }
   response = model.generate_content(
-      [*image_parts, *srt_parts, task_for_prompt],
+      [task_for_prompt, *image_parts, *srt_parts],
       generation_config=generative_models.GenerationConfig(
           temperature=1.4,
           response_schema=response_schema,
@@ -268,7 +470,7 @@ def create_scenes(
       ),
   )
   scene_list_json = json.loads(response.text)
-  return [storyboarding.Scene(**j) for j in scene_list_json]
+  return [storyboarding.ImageScene(**j) for j in scene_list_json]
 
 
 def create_storyboard_step(

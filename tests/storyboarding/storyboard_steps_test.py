@@ -7,8 +7,18 @@ import storyboarding
 from vertexai import generative_models
 
 _SCENES = [
-    storyboarding.Scene(background_image_path="image/path/1", start_time=0),
-    storyboarding.Scene(background_image_path="image/path/2", start_time=23.0),
+    storyboarding.ImageScene(
+        image_path="image/path/1",
+        start_time=0,
+        focal_point=[0, 0, 1000, 500],
+        main_subject=[0, 0, 1000, 1000],
+    ),
+    storyboarding.ImageScene(
+        image_path="image/path/2",
+        start_time=23.0,
+        focal_point=[250, 0, 1000, 500],
+        main_subject=[0, 250, 1000, 1000],
+    ),
 ]
 
 _TEXT_OVERLAYS = [
@@ -40,8 +50,14 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
   def test_create_scenes_test(self, mock_generate_content, *_):
     mock_generate_content.return_value.text = textwrap.dedent("""\
     [
-        {"background_image_path": "image/path/1", "start_time": 0},
-        {"background_image_path": "image/path/2", "start_time": 23.0}
+      {"image_path": "image/path/1",
+       "start_time": 0,
+       "focal_point": [0,0,1000,500],
+       "main_subject": [0,0,1000,1000]},
+      {"image_path": "image/path/2",
+       "start_time": 23.0,
+       "focal_point": [250,0,1000,500],
+       "main_subject": [0,250,1000,1000]}
     ]""")
 
     scenes = storyboarding.create_scenes(

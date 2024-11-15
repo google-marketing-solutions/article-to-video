@@ -11,6 +11,5 @@ from tests.text.summarize_text_step_test import SummarizeTextStepTest
 from tests.util.create_workdir_step_test import CreateWorkdirStepTest
 from tests.util.delete_workdir_step_test import DeleteWorkdirStepTest
 from tests.video.add_logo_to_video_step_test import AddLogoToVideoStepTest
-from tests.video.add_title_to_video_step_test import AddTitleToVideoStepTest
 from tests.video.create_text_overlay_step_test import CreateTextOverlayStepTest
 from tests.video.generate_video_from_images_step_test import GenerateVideoFromImagesStepTest

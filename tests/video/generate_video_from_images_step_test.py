@@ -32,12 +32,12 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
-            storyboarding.Scene(
-                background_image_path='input_images/image1.jpg',
+            storyboarding.ImageScene(
+                image_path='input_images/image1.jpg',
                 start_time=0,
             ),
-            storyboarding.Scene(
-                background_image_path='input_images/image2.jpg',
+            storyboarding.ImageScene(
+                image_path='input_images/image2.jpg',
                 start_time=24.5,
             ),
         ],
@@ -57,8 +57,19 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
 
     dir_root = 'tests/video/goldens/generate_video_from_images/'
+    focal_points = [
+        [0, 0, 1000, 1000],  # Entire image
+        [0, 500, 500, 1000],  # Top-right quadrant
+        [0, 0, 500, 500],  # Top-left quadrant
+        [500, 500, 1000, 1000],  # Lower-right quadrant
+        [500, 0, 1000, 500],  # Lower-left quadrant
+        [0, 0, 1000, 1000],
+        [0, 0, 1000, 1000],
+    ]
     scenes = [
-        storyboarding.Scene(i * 10, f'{dir_root}/image{i+1}.png')
+        storyboarding.ImageScene(
+            i * 10, f'{dir_root}/image{i+1}.png', focal_point=focal_points[i]
+        )
         for i in range(7)
     ]
     storyboard = storyboarding.Storyboard(

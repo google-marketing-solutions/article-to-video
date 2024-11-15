@@ -1,13 +1,38 @@
 """Model classes for Storyboarding."""
 
+import abc
 import dataclasses
 from typing import Optional, Tuple
 
 
 @dataclasses.dataclass
-class Scene:
+class Scene(abc.ABC):
   start_time: float
-  background_image_path: str
+
+
+@dataclasses.dataclass
+class ImageScene(Scene):
+  """A Scene composed from a static image.
+
+  Attributes:
+    start_time: The start time in the larger timeline for the ImageScene.
+    image_path: The path to the image.
+    main_subject: A bounding box, with coordinates normalized to 1000,
+      representing the main area subject for the image. Defaults to the entire
+      image.
+    focal_point: A bounding box, with coordinates normalized to 1000,
+      representing the main focal point for the image. The center of the
+      bounding box should be considered the focal point. Default focal point is
+      the center of the image.
+  """
+
+  image_path: str
+  main_subject: list[int] = dataclasses.field(
+      default_factory=lambda: [0, 0, 1000, 1000]
+  )
+  focal_point: list[int] = dataclasses.field(
+      default_factory=lambda: [0, 0, 1000, 1000]
+  )
 
 
 @dataclasses.dataclass

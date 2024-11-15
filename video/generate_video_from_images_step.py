@@ -6,6 +6,7 @@ from moviepy import editor as mpy
 import pipeline
 import storyboarding
 from video import video_generation_errors
+from video.create_text_overlay_step import (create_text_overlay_video_clip)
 
 
 class Visual(TypedDict):
@@ -30,7 +31,7 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
     self._ken_burns = ken_burns
 
   def process(self, storyboard: storyboarding.Storyboard) -> str:
-    """Creates a video concatenating different images taken as input.
+    """Creates a video concatenating different images and text taken as input.
 
     Args:
         storyboard: The storyboard on which to base the generation.
@@ -56,6 +57,7 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
     self._logger.info("\tWith %s s duration", audio_file_length)
 
     clips = []
+    # Add the scenes
     for i, scene in enumerate(storyboard.scenes):
       clip_end_time = (
           audio_file_length
@@ -76,6 +78,13 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
         clip = clip.resize(lambda t: min(1 + 0.0375 * t, 1.5)).crossfadein(1.0)
 
       clips.append(clip)
+    # Add the text overlays
+    video_width, video_height = self._target_resolution
+    for text_overlay_obj in storyboard.text_overlays:
+      text_overlay_video_clip = create_text_overlay_video_clip(
+          video_width, video_height, text_overlay_obj
+      )
+      clips.append(text_overlay_video_clip)
 
     composite_video = mpy.CompositeVideoClip(
         clips, size=self._target_resolution

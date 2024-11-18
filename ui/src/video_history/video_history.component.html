@@ -1,0 +1,19 @@
+<mat-card-header>
+    <mat-card-subtitle>
+        Video history:
+    </mat-card-subtitle>
+</mat-card-header>
+
+<mat-card-content>
+    <mat-selection-list>
+        @for (video of videos; track video.uri) {
+        <mat-list-item (click)="videoClicked(video.uri)">
+            <mat-icon matListItemIcon>play_circle</mat-icon>
+            <div matListItemTitle>{{video.uri}}</div>
+            <div matListItemLine>{{video.date}}</div>
+        </mat-list-item>
+        } @empty {
+        <mat-list-item>No videos yet.</mat-list-item>
+        }
+    </mat-selection-list>
+</mat-card-content>

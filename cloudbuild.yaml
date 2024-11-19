@@ -1,0 +1,29 @@
+steps:
+  # Docker Build
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "us-central1-docker.pkg.dev/scramble-atv/test-repo/atv",
+        ".",
+      ]
+
+  # Docker Push
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "us-central1-docker.pkg.dev/scramble-atv/test-repo/atv"]
+
+  # Deploy service
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
+    args:
+      [
+        "run",
+        "services",
+        "update",
+        "atv",
+        "--platform=managed",
+        "--image=us-central1-docker.pkg.dev/scramble-atv/test-repo/atv",
+        "--region=us-central1",
+        "--quiet",
+      ]
+    entrypoint: gcloud

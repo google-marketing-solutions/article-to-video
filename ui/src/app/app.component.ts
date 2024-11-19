@@ -1,5 +1,4 @@
-import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,7 +15,7 @@ import { AsyncPipe } from '@angular/common';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, VideoPlayer, VideoHistory, MatTabsModule, MatToolbarModule, VideoGeneration, MatCardModule, MatButtonModule, MatIconModule, AsyncPipe, MatProgressSpinnerModule],
+  imports: [VideoPlayer, VideoHistory, MatTabsModule, MatToolbarModule, VideoGeneration, MatCardModule, MatButtonModule, MatIconModule, AsyncPipe, MatProgressSpinnerModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -24,7 +23,7 @@ export class AppComponent {
   selectedTab = 0;
   watchingVideoUri = "";
 
-  clearTab(index: number){
+  clearTab(index: number) {
     if (index != 1) {
       this.watchingVideoUri = "";
     }

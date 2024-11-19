@@ -1,3 +1,4 @@
+@if (videoId != "") {
 <mat-card-header>
     <mat-card-subtitle>
         Generating video: {{videoId}}
@@ -5,7 +6,6 @@
 </mat-card-header>
 
 <mat-card-content>
-    @if (videoId != "") {
     <mat-stepper orientation="vertical" #stepper>
         <mat-step>
             <ng-template matStepLabel>Enter the text of the article</ng-template>
@@ -38,7 +38,9 @@
             </div>
         </mat-step>
     </mat-stepper>
-    } @else {
-    <mat-spinner></mat-spinner>
-    }
 </mat-card-content>
+} @else {
+<mat-card-content>
+    <mat-spinner></mat-spinner>
+</mat-card-content>
+}

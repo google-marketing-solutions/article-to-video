@@ -6,7 +6,7 @@ import { ArticleTextInput } from '../article_text_input/article_text_input.compo
 import { ArticleImagesUpload } from '../article_images_upload/article_images_upload.component';
 import { ArticleOptions, ArticleOptionsSelect } from '../article_options_select/article_options_select.component';
 import { MatButtonModule } from '@angular/material/button';
-import { AtvService, GeneratedVideo, GenerateVideoResponse } from '../atv.service';
+import { AtvService } from '../atv.service';
 
 @Component({
     selector: 'video-generation',
@@ -36,6 +36,6 @@ export class VideoGeneration {
     }
 
     ngOnInit(): void {
-        this.atvService.getId().subscribe(response => this.videoId = response.videoId);
+        this.atvService.getId().subscribe(response => this.videoId = response.video_id);
     }
 }

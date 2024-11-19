@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { ArticleOptions } from './article_options_select/article_options_select.component';
 
 export class VideoIdResponse {
-  constructor(public videoId: string) { }
+  constructor(public video_id: string) { }
 }
 
 export class ImageUploadResponse {

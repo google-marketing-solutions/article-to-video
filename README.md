@@ -22,17 +22,21 @@ This is a python based solution which processes customer-provided text and image
 
 ## Execution
 
-### Docker
+### Local Docker
 
 1. sudo docker build -t gtech/video-generation-from-images .
 2. sudo docker run -e PORT=5000 -p 5000:5000 -t gtech/video-generation-from-images
 
-### Server
+### Local Server
 
 1. cd ui
 2. ng build
 3. cd ..
 4. python3 -m flask --app video_generation_from_articles run
+
+### Cloud Deploy
+
+1. gcloud builds submit . --substitutions _IMAGE_NAME=atv,_SERVICE_NAME=atv,REPO_NAME=test-repo
 
 ### Standalone
 

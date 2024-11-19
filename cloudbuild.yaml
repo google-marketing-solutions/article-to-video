@@ -5,13 +5,13 @@ steps:
       [
         "build",
         "-t",
-        "us-central1-docker.pkg.dev/scramble-atv/test-repo/atv",
+        "${_AR_HOSTNAME}/$PROJECT_ID/$REPO_NAME/${_IMAGE_NAME}",
         ".",
       ]
 
   # Docker Push
   - name: "gcr.io/cloud-builders/docker"
-    args: ["push", "us-central1-docker.pkg.dev/scramble-atv/test-repo/atv"]
+    args: ["push", "${_AR_HOSTNAME}/$PROJECT_ID/$REPO_NAME/${_IMAGE_NAME}"]
 
   # Deploy service
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
@@ -20,10 +20,15 @@ steps:
         "run",
         "services",
         "update",
-        "atv",
+        "${_SERVICE_NAME}",
         "--platform=managed",
-        "--image=us-central1-docker.pkg.dev/scramble-atv/test-repo/atv",
-        "--region=us-central1",
+        "--image=${_AR_HOSTNAME}/$PROJECT_ID/$REPO_NAME/${_IMAGE_NAME}",
+        "--region=${_DEPLOY_REGION}",
         "--quiet",
       ]
     entrypoint: gcloud
+substitutions:
+    _IMAGE_NAME: atv
+    _SERVICE_NAME: atv
+    _DEPLOY_REGION: us-central1
+    _AR_HOSTNAME: us-central1-docker.pkg.dev

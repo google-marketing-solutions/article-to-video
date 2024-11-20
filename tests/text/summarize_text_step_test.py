@@ -1,8 +1,11 @@
 import os
 import unittest
 from unittest import mock
+
 import pipeline
 import text
+import vertexai
+import vertexai.generative_models
 
 
 class SummarizeTextStepTest(unittest.TestCase):
@@ -30,10 +33,12 @@ class SummarizeTextStepTest(unittest.TestCase):
         video_id="somearticleid",
     )
 
-  @mock.patch("text.summarize_text_step.vertexai.init")
-  @mock.patch("text.summarize_text_step.GenerativeModel")
+  @mock.patch.object(vertexai, "init", autospec=True)
+  @mock.patch.object(
+      vertexai.generative_models, "GenerativeModel", autospec=True
+  )
   def test_generate_summary_creates_summary_file(
-      self, mock_generative_model
+      self, mock_generative_model, _
   ):
     """Test that article summary is generated and saved correctly."""
     step = text.summarize_text_step.SummarizeTextStep(self.context)

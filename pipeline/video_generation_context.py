@@ -147,6 +147,8 @@ class VideoGenerationContext:
     self.gcs_bucket_image_path = config['gcs_bucket_image_path']
     self.workdir = f"{config['output_path']}/{video_id}"
     self.video_id = video_id
+    # TODO(cfeldman): Remove ken_burns option from UI and then delete from
+    # context. This is currently a no-op.
     self.ken_burns = request_params.get('ken_burns', False)
     self.burned_in_subtitles = request_params.get('burned_in_subtitles', False)
     self.language = self._LANGUAGE_CODES.get(

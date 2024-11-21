@@ -1,5 +1,6 @@
 """Module for Storyboard creation."""
 
+from .model import ImageAnimation
 from .model import ImageScene
 from .model import Scene
 from .model import Storyboard

@@ -1,10 +1,12 @@
-import tempfile
 import unittest
 from unittest import mock
 
-from moviepy import editor
+from moviepy import editor as mpy
+import numpy as np
+import parameterized
 import storyboarding
 from truth import truth
+from video import effects
 from video import generate_video_from_images_step
 from video import video_generation_errors
 
@@ -20,9 +22,9 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     ).IsRaised():
       step(storyboarding.Storyboard([], 'audio/path'))
 
-  @mock.patch.object(editor, 'CompositeVideoClip', autospec=True)
-  @mock.patch.object(editor, 'ImageClip', autospec=True)
-  @mock.patch.object(editor, 'AudioFileClip', autospec=True)
+  @mock.patch.object(mpy, 'CompositeVideoClip', autospec=True)
+  @mock.patch.object(mpy, 'ImageClip', autospec=True)
+  @mock.patch.object(mpy, 'AudioFileClip', autospec=True)
   def test_generates_video_from_images_returns_output_path(
       self, mock_audio_file_clip, *_
   ):
@@ -49,54 +51,230 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
         'output/path',
     )
 
-  def test_runs_command_and_validates_golden(self):
-    tmp_output_dir = tempfile.TemporaryDirectory()
-
+  @mock.patch.object(mpy, 'CompositeVideoClip', autospec=True)
+  @mock.patch.object(mpy, 'ImageClip', autospec=True)
+  @mock.patch.object(mpy, 'AudioFileClip', autospec=True)
+  def test_only_append_images_before_end_of_audio(
+      self, mock_audio_file_clip, mock_image_clip, _
+  ):
+    mock_audio_file_clip.return_value.duration = 15
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        tmp_output_dir.name + '5_withaudiovideo.mp4'
+        'output/path'
     )
-
-    dir_root = 'tests/video/goldens/generate_video_from_images/'
-    focal_points = [
-        [0, 0, 1000, 1000],  # Entire image
-        [0, 500, 500, 1000],  # Top-right quadrant
-        [0, 0, 500, 500],  # Top-left quadrant
-        [500, 500, 1000, 1000],  # Lower-right quadrant
-        [500, 0, 1000, 500],  # Lower-left quadrant
-        [0, 0, 1000, 1000],
-        [0, 0, 1000, 1000],
-    ]
-    scenes = [
-        storyboarding.ImageScene(
-            i * 10, f'{dir_root}/image{i+1}.png', focal_point=focal_points[i]
-        )
-        for i in range(7)
-    ]
     storyboard = storyboarding.Storyboard(
-        scenes=scenes,
-        main_audio_path=(
-            'tests/video/goldens/generate_video_from_images/audio.mp3'
-        ),
-        logo_path='tests/video/goldens/generate_video_from_images/favicon.ico',
+        scenes=[
+            storyboarding.ImageScene(
+                image_path='input_images/image1.jpg',
+                start_time=0,
+            ),
+            storyboarding.ImageScene(
+                image_path='input_images/image2.jpg',
+                start_time=20.0,
+            ),
+        ],
+        main_audio_path='/my/audio',
     )
 
-    result = step(storyboard)
+    step(storyboard)
 
-    files_equal = True
-    with open(
-        'tests/video/goldens/generate_video_from_images/5_withaudiovideo.mp4',
-        'rb',
-    ) as one:
-      with open(result, 'rb') as two:
-        chunk = other = True
-        while chunk or other:
-          chunk = one.read(1000)
-          other = two.read(1000)
-          if chunk != other:
-            files_equal = False
+    # 15 seconds + 1 second to allow for cross fade
+    mock_image_clip.assert_called_once_with(
+        'input_images/image1.jpg', duration=16
+    )
 
-    truth.AssertThat(files_equal).IsTrue()
-    tmp_output_dir.cleanup()
+  @parameterized.parameterized.expand([
+      ('zoom_in_slow', 'in', False),
+      ('zoom_in_fast', 'in', True),
+      ('zoom_out_slow', 'out', False),
+      ('zoom_out_fast', 'out', True),
+  ])
+  @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)
+  # replace each image with a 100x100 grid of random pixels.
+  @mock.patch.object(
+      mpy,
+      'ImageClip',
+      return_value=mpy.ImageClip(
+          np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
+      ),
+  )
+  # replace each audio file with 15 seconds of an A note.
+  @mock.patch.object(
+      mpy,
+      'AudioFileClip',
+      # the sine function is an example from the AudioClip pydoc.
+      return_value=mpy.AudioClip(
+          lambda t: 2 * [np.sin(440 * 2 * np.pi * t)], duration=15
+      ),
+  )
+  @mock.patch.object(effects, 'zoom', autospec=True)
+  def test_applies_zoom_animation_correctly(
+      self,
+      animation,
+      direction,
+      fast,
+      mock_zoom,
+      *_,
+  ):
+    step = generate_video_from_images_step.GenerateVideoFromImagesStep(
+        'output/path'
+    )
+
+    storyboard = storyboarding.Storyboard(
+        scenes=[
+            storyboarding.ImageScene(
+                image_path='input_images/image1.jpg',
+                start_time=0,
+                animation=animation,
+            ),
+        ],
+        main_audio_path='/my/audio',
+    )
+
+    step(storyboard)
+
+    mock_zoom.assert_called_once_with(
+        mock.ANY,
+        direction=direction,
+        fast=fast,
+    )
+
+  @parameterized.parameterized.expand([
+      ('panto_fast', (32, 32), True),
+      ('panto_slow', (32, 32), False),
+  ])
+  @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)
+  # replace each image with a 100x100 grid of random pixels.
+  @mock.patch.object(
+      mpy,
+      'ImageClip',
+      return_value=mpy.ImageClip(
+          np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
+      ),
+  )
+  # replace each audio file with 15 seconds of an A note.
+  @mock.patch.object(
+      mpy,
+      'AudioFileClip',
+      # the sine function is an example from the AudioClip pydoc.
+      return_value=mpy.AudioClip(
+          lambda t: 2 * [np.sin(440 * 2 * np.pi * t)], duration=15
+      ),
+  )
+  @mock.patch.object(effects, 'zoom_pan_to', autospec=True)
+  def test_applies_panto_animation_correctly(
+      self, animation, target, fast, mock_zoom_pan_to, *_
+  ):
+    step = generate_video_from_images_step.GenerateVideoFromImagesStep(
+        'output/path'
+    )
+    storyboard = storyboarding.Storyboard(
+        scenes=[
+            storyboarding.ImageScene(
+                image_path='input_images/image1.jpg',
+                start_time=0,
+                focal_point=[0, 0, 50, 50],
+                animation=animation,
+            ),
+        ],
+        main_audio_path='/my/audio',
+    )
+
+    step(storyboard)
+
+    mock_zoom_pan_to.assert_called_once_with(
+        mock.ANY,
+        target=target,
+        fast=fast,
+    )
+
+  @parameterized.parameterized.expand([
+      ('slide_left', 'left'),
+      ('slide_right', 'right'),
+      ('slide_up', 'up'),
+      ('slide_down', 'down'),
+  ])
+  @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)
+  # replace each image with a 100x100 grid of random pixels.
+  @mock.patch.object(
+      mpy,
+      'ImageClip',
+      return_value=mpy.ImageClip(
+          np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
+      ),
+  )
+  # replace each audio file with 15 seconds of an A note.
+  @mock.patch.object(
+      mpy,
+      'AudioFileClip',
+      # the sine function is an example from the AudioClip pydoc.
+      return_value=mpy.AudioClip(
+          lambda t: 2 * [np.sin(440 * 2 * np.pi * t)], duration=15
+      ),
+  )
+  @mock.patch.object(effects, 'slide', autospec=True)
+  def test_applies_slide_animation_correctly(
+      self, animation, direction, mock_slide, *_
+  ):
+    step = generate_video_from_images_step.GenerateVideoFromImagesStep(
+        'output/path'
+    )
+    storyboard = storyboarding.Storyboard(
+        scenes=[
+            storyboarding.ImageScene(
+                image_path='input_images/image1.jpg',
+                start_time=0,
+                animation=animation,
+            ),
+        ],
+        main_audio_path='/my/audio',
+    )
+
+    step(storyboard)
+
+    mock_slide.assert_called_once_with(
+        mock.ANY,
+        direction=direction,
+    )
+
+  @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)
+  # replace each audio file with 15 seconds of an A note.
+  @mock.patch.object(
+      mpy,
+      'AudioFileClip',
+      # the sine function is an example from the AudioClip pydoc.
+      return_value=mpy.AudioClip(
+          lambda t: 2 * [np.sin(440 * 2 * np.pi * t)], duration=15
+      ),
+  )
+  # replace each image with a 100x100 grid of random pixels.
+  @mock.patch.object(
+      mpy,
+      'ImageClip',
+      return_value=mpy.ImageClip(
+          np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
+      ),
+  )
+  def test_adds_logo(self, mock_image_clip, *_):
+    step = generate_video_from_images_step.GenerateVideoFromImagesStep(
+        'output/path'
+    )
+    storyboard = storyboarding.Storyboard(
+        scenes=[
+            storyboarding.ImageScene(
+                image_path='input_images/image1.jpg',
+                start_time=0,
+            ),
+        ],
+        main_audio_path='/my/audio',
+        logo_path='path/to/my/logo.png',
+    )
+
+    step(storyboard)
+
+    mock_image_clip.assert_called_with(
+        'path/to/my/logo.png',
+        duration=15,  # audio duration
+    )
 
 
 if __name__ == '__main__':

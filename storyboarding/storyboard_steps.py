@@ -3,6 +3,7 @@
 import json
 import re
 import textwrap
+import typing
 
 import storyboarding
 from storyboarding.model import TextOverlay
@@ -389,51 +390,67 @@ def create_scenes(
     Your task is to analyze a provided SRT file (containing timestamps and
     transcribed narration) and a list of image files. Based on the SRT file's
     content, you will determine the most appropriate images to accompany the
-    narration and generate a schedule to display the images.
+    narration and generate a schedule to display the images, including selecting
+    an animation for each image.
 
     Input:
     - SRT Contents: The SRT contains timestamps and the corresponding narration
     for the slideshow.
-    - Image List: A list of images, identified by their file paths that can be
-    included in the slideshow.
+    - Image List: A list of images, identified by their file paths, that can be
+    included in the slideshow. Each image includes descriptions and bounding
+    boxes (if available).
+
+    Supported Animations:
+    - zoom_in_slow (slow, linear zoom to image center)
+    - zoom_in_fast (fast, eased zoom to image center)
+    - zoom_out_slow (slow, linear zoom out from image center)
+    - zoom_out_fast (fast, eased zoom out from image center)
+    - slide_left (image slides smoothly from right to left)
+    - slide_right (image slide smoothly from left to right)
+    - slide_up (image slides smoothly from bottom to top)
+    - slide_down (image slides smoothly from top to bottom)
+    - panto_slow (linear zoom pan to image focal point)
+    - panto_fast (fast, eased zoom pan to image focal point)
+    - static (static image)
 
     Output:
     A structured list specifying the following for each image in the slideshow:
     - File Path: The complete path to the image file.
-    - Start Time (Timestamp): The precise time (in the same format as the SRT
-      timestamps) when the image should appear. This timestamp should align
-      logically with the narration in the SRT file.
-    - Bounding Boxes: Two bounding boxes associated with the image (if
-      provided).
-    - Justification for Start Time: Describe your reasoning for choosing the
-    specific start time you choose. Does the image content align with an SRT
-    cue, is it being placed to make sure the slideshow elements are evenly
-    spaced, or some other reason.
+    - Start Time (Timestamp): The precise time (in seconds) when the image
+    should appear, aligning logically with the narration.
+    - Bounding Boxes: Two bounding boxes associated with the image (if provided)
+    - Main Subject Bounding Box and Focal Point Bounding Box.
+    - Animation: The chosen animation effect for the image from the supported
+    list.
+    - Justification for Start Time and Animation: Describe your reasoning for
+    choosing the specific start time and animation. Explain how the image
+    content, narration cue, and desired visual effect influenced your choices.
 
     Instructions:
-    1. Logical Alignment: Prioritize aligning image timestamps with the content
-    of the SRT cues. If an image directly illustrates a specific subtitle, its
-    timestamp should match that subtitle's start time.
-    2. Thematic Images: You can include images that thematically relate to the
-    overall content of the SRT file, even if they don't perfectly match a
-    specific subtitle.
-    3. Uniform Distribution of Thematic Images:  *Crucially*, for thematic
-    images that don't align with specific SRT queues, distribute them **evenly
-    across the entire duration** of the SRT file. Calculate the total duration
-    of the SRT file and divide it into equal segments for placing these thematic
-    images. For instance, if the SRT file is 60 seconds long and you have 3
-    thematic images, place them at approximately 20, 40, and 60 seconds. Do not
-    have any images start after the last entry in the SRT file.
-    4. Maximize Spacing: Regardless of whether an image aligns directly with an
-    SRT queue or is thematic, ensure that the image start times are spaced as
-    far apart as possible within the overall SRT duration. **Avoid clustering
-    images at the beginning.**
-    5. The minimum time between images should be about 5 seconds. Prefer at
-    least ~10 seconds between cues.
-    6. Relevance: Only include images that are relevant to the content of the
-    SRT file. Omit irrelevant images.
+    1. Logical Alignment: Align image timestamps with the content of the SRT
+    cues. If an image directly illustrates a specific subtitle, its timestamp
+    should match that subtitle's start time.
+    2. Thematic Images: Include images that thematically relate to the overall
+    SRT content, even if they don't perfectly match a specific subtitle.
+    3. Uniform Distribution: For thematic images, distribute them evenly across
+    the entire duration of the SRT file. Calculate the total duration and divide
+    it into equal segments for placing these images. Do not have any images
+    start after the last entry in the SRT file.
+    4. Maximize Spacing: Ensure image start times are spaced as far apart as
+    possible within the overall SRT duration. Avoid clustering images at the
+    beginning. The minimum time between images should be about 5 seconds,
+    preferably ~10 seconds.
+    5. Relevance: Only include relevant images. Omit irrelevant ones.
+    6. Animation Selection: Choose an animation for each image that enhances the
+    visual storytelling and fits the image content and narration. Prefer zoom in
+    or zoom out when there is no main subject, or the main subject takes up most
+    of the image. Prefer slide animations for images with large focal points, or
+    many focal points. And use panto, when there is a specific focal point that
+    you want to draw the viewer's attention to. Be sure to use a mix of
+    animations, speeds, and directions. Justify your animation choice in the
+    output.
 
-    **Example**
+    Example
 
     SRT Contents:
     1 00:00:00,000 --> 00:00:05,000 This is a story about a cat named Mittens.
@@ -442,32 +459,46 @@ def create_scenes(
 
     Image List:
     /path/to/image/cat.jpg:
-    - Description: [description]
-    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
-    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
+        - Description: [description]
+        - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+        - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
     /path/to/image/garden.jpg:
-    - Description: [description]
-    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
-    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
+        - Description: [description]
+        - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+        - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
     /path/to/image/butterfly.jpg:
-    - Description: [description]
-    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
-    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
+        - Description: [description]
+        - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+        - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
     /path/to/image/dog.jpg:
-    - Description: [description]
-    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
-    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
+        - Description: [description]
+        - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+        - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
 
     Output:
     00:00:00,000 /path/to/image/cat.jpg
     - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
     - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
+    - Animation: zoom_in_slow
+    - Justification: The image of the cat directly corresponds to the first
+    subtitle introducing Mittens. The slow zoom-in draws focus to the cat as the
+    subject of the story.
+
     00:00:05,000 /path/to/image/garden.jpg
     - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
     - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
+    - Animation: pan_to_target_slow
+    - Justification: This image aligns with the second subtitle about Mittens
+    playing in the garden. The slow pan suggests exploration of the garden
+    environment.
+
     00:00:10,000 /path/to/image/butterfly.jpg
     - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
     - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
+    - Animation: slide_right
+    - Justification: The image matches the third subtitle about chasing a
+    butterfly. The slide-right animation mimics the butterfly's movement, adding
+    dynamism.
   """)
   model = generative_models.GenerativeModel("gemini-1.5-pro-002")
   image_parts = ["Image List:", _describe_images(image_file_paths)]
@@ -481,6 +512,10 @@ def create_scenes(
           "properties": {
               "start_time": {"type": "number"},
               "image_path": {"type": "string"},
+              "animation": {
+                  "type": "string",
+                  "enum": list(typing.get_args(storyboarding.ImageAnimation)),
+              },
               "main_subject": {
                   "type": "array",
                   "items": {"type": "number"},

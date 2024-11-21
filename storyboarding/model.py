@@ -2,7 +2,21 @@
 
 import abc
 import dataclasses
-from typing import Optional, Tuple
+from typing import Literal, Optional, Tuple
+
+ImageAnimation = Literal[
+    "zoom_in_slow",
+    "zoom_in_fast",
+    "zoom_out_slow",
+    "zoom_out_fast",
+    "slide_left",
+    "slide_right",
+    "slide_up",
+    "slide_down",
+    "panto_slow",
+    "panto_fast",
+    "static",
+]
 
 
 @dataclasses.dataclass
@@ -17,6 +31,7 @@ class ImageScene(Scene):
   Attributes:
     start_time: The start time in the larger timeline for the ImageScene.
     image_path: The path to the image.
+    animation: An animation to apply to the static image.
     main_subject: A bounding box, with coordinates normalized to 1000,
       representing the main area subject for the image. Defaults to the entire
       image.
@@ -27,6 +42,7 @@ class ImageScene(Scene):
   """
 
   image_path: str
+  animation: ImageAnimation = "static"
   main_subject: list[int] = dataclasses.field(
       default_factory=lambda: [0, 0, 1000, 1000]
   )

@@ -62,9 +62,7 @@ class VideoGeneratorExecution:
     output_video_path = f"{context.workdir}/5_withaudiovideo.mp4"
     pipeline.Pipeline().add_steps(
         storyboarding.create_storyboard_step,
-        video.GenerateVideoFromImagesStep(
-            output_video_path, ken_burns=context.ken_burns
-        ),
+        video.GenerateVideoFromImagesStep(output_video_path),
     ).process(
         article_content=context.article_content,
         image_paths=glob.glob(f"uploads/{context.video_id}/images/*"),

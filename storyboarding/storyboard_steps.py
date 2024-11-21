@@ -6,7 +6,6 @@ import textwrap
 import typing
 
 import storyboarding
-from storyboarding.model import TextOverlay
 from vertexai import generative_models
 
 
@@ -199,7 +198,7 @@ def _describe_images(image_file_paths: list[str]) -> str:
   return response.text
 
 
-def serialize_scenes(scenes: list[storyboarding.ImageScene]) -> str:
+def serialize_scenes(scenes: list[storyboarding.Scene]) -> str:
   """Convert scenes into a string format for inclusion in the Gemini prompt."""
   serialized_scenes = []
   for scene in scenes:
@@ -214,7 +213,7 @@ def create_text_overlays(
     srt_parts: list[str],
     srt_end_time: int,
     scenes: storyboarding.Scene,
-) -> list[TextOverlay]:
+) -> list[storyboarding.TextOverlay]:
   """Determines text overlays (what they say and when in the video they appear).
 
   Uses an LLM to create text overlays, selecting relevant quotes from the
@@ -542,7 +541,7 @@ def create_scenes(
       ),
   )
   scene_list_json = json.loads(response.text)
-  return [storyboarding.ImageScene(**j) for j in scene_list_json]
+  return [storyboarding.Scene(**j) for j in scene_list_json]
 
 
 def create_storyboard_step(
@@ -562,13 +561,13 @@ def create_storyboard_step(
   Returns:
     A Storyboard.
   """
-  scenes = storyboarding.create_scenes(
+  scenes = create_scenes(
       image_file_paths=image_paths,
       srt_file_path=srt_path,
   )
   srt_parts, srt_end_time = _parse_srt_file(srt_path)
 
-  text_overlays = storyboarding.create_text_overlays(
+  text_overlays = create_text_overlays(
       article_content=article_content,
       srt_parts=srt_parts,
       srt_end_time=srt_end_time,

@@ -7,13 +7,13 @@ import storyboarding
 from vertexai import generative_models
 
 _SCENES = [
-    storyboarding.ImageScene(
+    storyboarding.Scene(
         image_path="image/path/1",
         start_time=0,
         focal_point=[0, 0, 1000, 500],
         main_subject=[0, 0, 1000, 1000],
     ),
-    storyboarding.ImageScene(
+    storyboarding.Scene(
         image_path="image/path/2",
         start_time=23.0,
         focal_point=[250, 0, 1000, 500],
@@ -56,8 +56,12 @@ Another subtitle text.
 
 class CreateStoryBoardStepsTest(unittest.TestCase):
 
-  @mock.patch.object(storyboarding, "create_scenes", autospec=True)
-  @mock.patch.object(storyboarding, "create_text_overlays", autospec=True)
+  @mock.patch.object(
+      storyboarding.storyboard_steps, "create_scenes", autospec=True
+  )
+  @mock.patch.object(
+      storyboarding.storyboard_steps, "create_text_overlays", autospec=True
+  )
   @mock.patch.object(
       generative_models,
       "GenerativeModel",

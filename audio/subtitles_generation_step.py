@@ -5,7 +5,6 @@ from typing import Tuple
 import pipeline
 from util import gcs_utils
 from util.errors import GeminiError
-import vertexai
 from vertexai.generative_models import GenerativeModel
 from vertexai.generative_models import Part
 
@@ -34,8 +33,6 @@ class SubtitlesGenerationStep(pipeline.VideoGenerationStep):
         Local file path for the and generated SRT file.
     """
 
-    vertexai.init(project=self.gcp_project, location=self.gcp_location)
-
     generation_config = {
         "max_output_tokens": 8192,
         "temperature": 1,
@@ -62,7 +59,7 @@ class SubtitlesGenerationStep(pipeline.VideoGenerationStep):
     )
 
     audio_file = Part.from_uri(audio_and_transcript[0], mime_type="audio/mpeg")
-    contents = [audio_file, audio_and_transcript[1], prompt]
+    contents = [prompt, audio_file, audio_and_transcript[1]]
     response = model.generate_content(
         contents, generation_config=generation_config
     )

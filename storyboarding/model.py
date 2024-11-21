@@ -1,6 +1,5 @@
 """Model classes for Storyboarding."""
 
-import abc
 import dataclasses
 from typing import Literal, Optional, Tuple
 
@@ -20,16 +19,11 @@ ImageAnimation = Literal[
 
 
 @dataclasses.dataclass
-class Scene(abc.ABC):
-  start_time: float
-
-
-@dataclasses.dataclass
-class ImageScene(Scene):
+class Scene:
   """A Scene composed from a static image.
 
   Attributes:
-    start_time: The start time in the larger timeline for the ImageScene.
+    start_time: The start time in the larger timeline for the Scene.
     image_path: The path to the image.
     animation: An animation to apply to the static image.
     main_subject: A bounding box, with coordinates normalized to 1000,
@@ -41,13 +35,14 @@ class ImageScene(Scene):
       the center of the image.
   """
 
+  start_time: float
   image_path: str
   animation: ImageAnimation = "static"
-  main_subject: list[int] = dataclasses.field(
-      default_factory=lambda: [0, 0, 1000, 1000]
+  main_subject: list[float] = dataclasses.field(
+      default_factory=lambda: [0.0, 0.0, 1000.0, 1000.0]
   )
-  focal_point: list[int] = dataclasses.field(
-      default_factory=lambda: [0, 0, 1000, 1000]
+  focal_point: list[float] = dataclasses.field(
+      default_factory=lambda: [0.0, 0.0, 1000.0, 1000.0]
   )
 
 

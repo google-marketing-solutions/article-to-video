@@ -34,11 +34,11 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
-            storyboarding.ImageScene(
+            storyboarding.Scene(
                 image_path='input_images/image1.jpg',
                 start_time=0,
             ),
-            storyboarding.ImageScene(
+            storyboarding.Scene(
                 image_path='input_images/image2.jpg',
                 start_time=24.5,
             ),
@@ -63,11 +63,11 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
-            storyboarding.ImageScene(
+            storyboarding.Scene(
                 image_path='input_images/image1.jpg',
                 start_time=0,
             ),
-            storyboarding.ImageScene(
+            storyboarding.Scene(
                 image_path='input_images/image2.jpg',
                 start_time=20.0,
             ),
@@ -121,7 +121,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
 
     storyboard = storyboarding.Storyboard(
         scenes=[
-            storyboarding.ImageScene(
+            storyboarding.Scene(
                 image_path='input_images/image1.jpg',
                 start_time=0,
                 animation=animation,
@@ -169,7 +169,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
-            storyboarding.ImageScene(
+            storyboarding.Scene(
                 image_path='input_images/image1.jpg',
                 start_time=0,
                 focal_point=[0, 0, 50, 50],
@@ -220,7 +220,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
-            storyboarding.ImageScene(
+            storyboarding.Scene(
                 image_path='input_images/image1.jpg',
                 start_time=0,
                 animation=animation,
@@ -260,7 +260,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
-            storyboarding.ImageScene(
+            storyboarding.Scene(
                 image_path='input_images/image1.jpg',
                 start_time=0,
             ),

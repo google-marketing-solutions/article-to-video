@@ -1,4 +1,6 @@
 import os
+import tempfile
+import textwrap
 import unittest
 from unittest import mock
 
@@ -10,69 +12,100 @@ import vertexai.generative_models
 
 class SummarizeTextStepTest(unittest.TestCase):
 
-  @classmethod
-  def setUpClass(cls):
-    super().setUpClass()
-    output_dir = "tests/summaries/generated/somearticleid"
-    os.makedirs(output_dir, exist_ok=True)
-
   def setUp(self):
     super().setUp()
+    self.workdir = tempfile.TemporaryDirectory()
+    os.makedirs(self.workdir.name + "/somearticleid", exist_ok=True)
+
     self.context = pipeline.VideoGenerationContext(
         {
-            "workdir": "tests/summaries/generated",
             "gcp_project": "somegcpproject",
             "gcp_location": "us-central1",
             "gcs_bucket_name": "my_bucket_name",
             "gcs_bucket_text_path": "my_gcs_bucket_text_path",
             "gcs_bucket_image_path": "my_gcs_bucket_image_path",
-            "output_path": "tests/summaries/generated",
+            "output_path": self.workdir.name,
             "language": "en",
         },
         request_params={},
         video_id="somearticleid",
     )
 
-  @mock.patch.object(vertexai, "init", autospec=True)
+  def tearDown(self):
+    self.workdir.cleanup()
+    return super().tearDown()
+
   @mock.patch.object(
       vertexai.generative_models, "GenerativeModel", autospec=True
   )
-  def test_generate_summary_creates_summary_file(
-      self, mock_generative_model, _
-  ):
-    """Test that article summary is generated and saved correctly."""
+  def test_summarize_article_for_single_voice(self, mock_generative_model):
+    self.context.multivoice = False
     step = text.summarize_text_step.SummarizeTextStep(self.context)
-    article_content = (
-        "This is a sample article with some statistics like 50% increase and 10"
-        " million dollars."
-    )
-
-    mock_model = mock_generative_model.return_value
-    mock_model.generate_content.return_value.text = (
-        "This is a summary that captures attention. It discusses the article's"
-        " main points. It mentions important statistics like 50% increase and"
-        " 10 million dollars. Finally, it concludes the article's relevance."
-    )
-
-    output_path = "tests/summaries/generated/somearticleid/1_summary.txt"
-
-    with mock.patch("builtins.open", mock.mock_open()) as mocked_file:
-      summary_text = step(article_content)
-
-    mocked_file.assert_any_call(output_path, "w")
-
-    handle = mocked_file()
-    handle.write.assert_called_once_with(
-        "This is a summary that captures attention. It discusses the article's"
-        " main points. It mentions important statistics like 50% increase and"
-        " 10 million dollars. Finally, it concludes the article's relevance."
+    mock_generative_model.return_value.generate_content.return_value.text = (
+        "article summary"
     )
 
     self.assertEqual(
-        summary_text,
-        "This is a summary that captures attention. It discusses the article's"
-        " main points. It mentions important statistics like 50% increase and"
-        " 10 million dollars. Finally, it concludes the article's relevance.",
+        step("some article content"),
+        "article summary",
+    )
+
+  @mock.patch.object(
+      vertexai.generative_models, "GenerativeModel", autospec=True
+  )
+  def test_summarize_article_for_single_voice_prompt(
+      self, mock_generative_model
+  ):
+    self.context.multivoice = False
+    step = text.summarize_text_step.SummarizeTextStep(self.context)
+    mock_generative_model.return_value.generate_content.return_value.text = (
+        "article summary"
+    )
+
+    step("some article content")
+
+    mock_generative_model.return_value.generate_content.assert_called_once_with(
+        textwrap.dedent("""\
+        Summarize the content of the following article according to these rules:
+        1. The summary must have between 300 and 600 words.
+        2. The summary must not mention the author's name.
+        3. The summary must start with a phrase that captures the attention of
+           the audience  and is related to the content of the article.
+        4. The summary must end with a conclusion.
+        5. In the case that the article has numbers of statistics, they should
+           be mentioned in the summary.
+        6. The summary must have more than two phrases.
+        7. The summary must have less than six phrases.
+        8. The language for the article and for response is en-US
+
+        The article to be summarized is as follows:
+        some article content
+      """),
+        generation_config=mock.ANY,
+    )
+
+  def test_return_article_for_multivoice(self):
+    self.context.multivoice = True
+    step = text.summarize_text_step.SummarizeTextStep(self.context)
+
+    self.assertEqual(
+        step("some article content"),
+        "some article content",
+    )
+
+  def test_creates_file_with_return_value(self):
+    """Test that article summary is generated and saved correctly."""
+    self.context.multivoice = True
+    step = text.summarize_text_step.SummarizeTextStep(self.context)
+
+    output_path = self.workdir.name + "/somearticleid/1_summary.txt"
+
+    with mock.patch("builtins.open", mock.mock_open()) as mocked_file:
+      step("some article content")
+
+    mocked_file.assert_any_call(output_path, "w", encoding="utf-8")
+    mocked_file.return_value.write.assert_called_once_with(
+        "some article content"
     )
 
 

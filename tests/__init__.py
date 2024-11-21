@@ -12,3 +12,4 @@ from tests.util.delete_workdir_step_test import DeleteWorkdirStepTest
 from tests.video.create_text_overlay_step_test import CreateTextOverlayStepTest
 from tests.video.effects_test import EffectsTest
 from tests.video.generate_video_from_images_step_test import GenerateVideoFromImagesStepTest
+from tests.video_generator_execution_test import VideoGeneratorExecutionTest

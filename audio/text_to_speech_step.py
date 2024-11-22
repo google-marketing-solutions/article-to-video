@@ -57,16 +57,15 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
     if self.multivoice and self.language == "en-US":
       transcript_json = self.generate_multivoice_transcript(summary_text)
       audio_path = self.generate_multivoice_audio(transcript_json)
-      textoutput_content = transcript_json["textoutput"]
-      return audio_path, textoutput_content
-
-    audio_path = self.generate_single_voice(summary_text)
+      summary_text = transcript_json["textoutput"]
+    else:
+      audio_path = self.generate_single_voice(summary_text)
     audio_gcs_uri = gcs_utils.upload_to_gcs(
         audio_path,
         self.gcs_bucket_name,
         f"{self.video_id}/{self._OUTPUT_AUDIO_FILE}",
     )
-    return audio_path, audio_gcs_uri, summary_text
+    return audio_gcs_uri, summary_text
 
   def generate_single_voice(self, summary_text: str) -> str:
     """Generate single-voice audio for the provided text.

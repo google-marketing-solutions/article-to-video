@@ -27,6 +27,7 @@ from audio import subtitles_generation_step
 from audio import text_to_speech_step
 import pipeline
 import storyboarding
+from text import summarize_text_step
 from util import create_workdir_step
 import vertexai
 import video
@@ -35,7 +36,7 @@ import video
 class VideoGeneratorExecution:
   """Class representing one execution of the video generator pipeline."""
 
-  def genvideo(self, context: pipeline.VideoGenerationContext) -> str:
+  def genvideo(self, context: pipeline.VideoGenerationContext):
     """Main function containing helper function execution.
 
     Args:
@@ -46,16 +47,18 @@ class VideoGeneratorExecution:
     """
     vertexai.init(project=context.gcp_project, location=context.gcp_location)
 
-    audio_path, _ = (
+    srt_path = (
         pipeline.VideoGenerationPipeline(context)
         .add_steps(
             create_workdir_step.CreateWorkdirStep,
+            summarize_text_step.SummarizeTextStep,
             text_to_speech_step.TextToSpeechStep,
             subtitles_generation_step.SubtitlesGenerationStep,
         )
         .process(context.article_content)
     )
 
+    audio_path = f"{context.workdir}/2_readaloud.mp3"
     output_video_path = f"{context.workdir}/5_withaudiovideo.mp4"
     pipeline.Pipeline().add_steps(
         storyboarding.create_storyboard_step,
@@ -66,7 +69,7 @@ class VideoGeneratorExecution:
         article_content=context.article_content,
         image_paths=glob.glob(f"uploads/{context.video_id}/images/*"),
         main_audio_path=audio_path,
-        srt_path="[SRT PATH PLACEHOLDER]",
+        srt_path=srt_path,
     )
 
     return f"https://storage.googleapis.com/{context.gcs_bucket_name}/{context.video_id}.mp4"

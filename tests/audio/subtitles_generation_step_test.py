@@ -4,6 +4,7 @@ from unittest import mock
 import audio
 from audio import subtitles_generation_step
 import pipeline
+from util import gcs_utils
 from util.errors import GeminiError
 
 
@@ -51,9 +52,14 @@ class TextToSpeechStepTest(unittest.TestCase):
     with self.assertRaises(GeminiError):
       step((audio_path, summary_text))
 
+  @mock.patch.object(
+      gcs_utils,
+      "upload_to_gcs",
+      return_value="gs://my_bucket_name/subtitles.srt",
+  )
   @mock.patch.object(subtitles_generation_step.vertexai, "init")
   @mock.patch.object(subtitles_generation_step, "GenerativeModel")
-  def test_srt_file_output_success(self, mock_generative_model, _):
+  def test_srt_file_output_success(self, mock_generative_model, *_):
     """Test that SRT file successfully written."""
 
     subtitles = (
@@ -62,7 +68,7 @@ class TextToSpeechStepTest(unittest.TestCase):
         "This is the first subtitle.\n"
         "2\n"
         "00:00:20,000 --> 00:00:04,400\n"
-        "This is the second subtitle."
+        "This is the second subtitle.\n"
     )
 
     mock_model = mock_generative_model()
@@ -75,9 +81,11 @@ class TextToSpeechStepTest(unittest.TestCase):
     with mock.patch("builtins.open", mock.mock_open()) as mocked_file:
       srt_text = step((audio_path, summary_text))
       mocked_file.assert_any_call(output_path, "w")
-      self.assertEqual(
-          srt_text[1], "tests/audio/generated/somevideoid/subtitles.srt"
-      )
+      self.assertEqual(srt_text[1], "gs://my_bucket_name/subtitles.srt")
+
+      # self.assertEqual(
+      #     srt_text[1], "tests/audio/generated/somevideoid/subtitles.srt"
+      # )
 
 
 if __name__ == "__main__":

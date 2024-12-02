@@ -1,6 +1,7 @@
 """Steps to for Storyboard creation."""
 
 import json
+import re
 import textwrap
 
 import storyboarding
@@ -8,179 +9,41 @@ from storyboarding.model import TextOverlay
 from vertexai import generative_models
 
 
-def serialize_scenes(scenes: list[storyboarding.ImageScene]) -> str:
-  """Convert scenes into a string format for inclusion in the Gemini prompt."""
-  serialized_scenes = []
-  for scene in scenes:
-    serialized_scenes.append(
-        f"Scene start_time: {scene.start_time}, image_path: {scene.image_path}"
-    )
-  return "\n".join(serialized_scenes)
-
-
-def create_text_overlays(
-    article_content: str, srt_file_path: str, scenes: storyboarding.Scene
-) -> list[TextOverlay]:
-  """Determines text overlays (what they say and when in the video they appear).
-
-  Takes the article content and an SRT file and determines what text overlays
-  should be in the video, and when they should appear.
+def _parse_srt_file(srt_file_path: str) -> tuple[list[str], int]:
+  """Parses an SRT file and returns the contents & the last end time in seconds.
 
   Args:
-    article_content: Text of the article.
-    srt_file_path: The SRT file to organize the images against.
-    scenes: visual scenes for the video
+    srt_file_path: The path to the SRT file.
 
   Returns:
-     A list of TextOverlays.
+    A tuple containing the SRT file contents in a list and the final end time in
+      seconds.
   """
-  serialized_scenes = serialize_scenes(scenes)
-
-  task_for_prompt = textwrap.dedent("""\
-  You are a digital media expert tasked with creating impactful text overlays
-  for a narrated video based on an article.
-
-  Given:
-  Article Content: The full text of the article.
-  SRT File: A subtitle file with timestamps and corresponding text for the video
-  narration.
-  Scenes: A list of scenes with start times and background image paths.
-  Output:
-  Produce a JSON array of text overlay objects, each with the following
-  properties:
-
-  start_time: (number) When the overlay appears in the video (seconds).
-  end_time: (number) When the overlay disappears (seconds).
-  text: (string) The text to display.
-  speaker: (optional, string or null) The person quoted (from the article, not
-    the narrator).
-  transition_in: (optional, string or null) "slide_from_left",
-    "slide_from_right", "slide_from_bottom", or "fade_in".
-  transition_out: (optional, string or null) "fade_out"
-  position: (optional, array of strings) X and Y coordinates ("left", "center",
-    "right") and ("top", "center", "bottom"). Example: ["right", "center"]
-  font_style: (optional, string, default "Helvetica")
-  font_size: (optional, number, default 48) Minimum size 48.
-  background_color: (optional, string, default "black")
-  Rules:
-
-  Prioritize direct quotes from the article.
-  Minimum 3 words, maximum 35 words per overlay.
-  No overlays in the first 4 seconds of the video.
-  One overlay every 15-20 seconds.
-  Minimum display time per overlay: 14 seconds.
-  Overlay duration: 0.3 seconds per word + 4 seconds buffer.
-  Vary overlay positions and transitions. No two overlays should have the same x
-    or y position.
-  Ensure text is legible against the background image.
-  Example Output:
-
-  JSON
-  [
-    {
-      "start_time": 4.5,
-      "end_time": 18.5,
-      "text": "The future belongs to those who believe in beautiful dreams.",
-      "speaker": "Eleanor Roosevelt",
-      "transition_in": "fade_in",
-      "transition_out": "fade_out",
-      "position": ["left", "top"]
-    },
-    {
-      "start_time": 23.0,
-      "end_time": 38.0,
-      "text": "'The only way to do great work is to love what you do.'",
-      "speaker": "Steve Jobs",
-      "transition_in": "slide_from_right",
-      "transition_out": "fade_out",
-      "position": ["right", "bottom"]
-    }
-  ]
-  """)
-  model = generative_models.GenerativeModel("gemini-1.5-pro-001")
   with open(srt_file_path, "r", encoding="utf-8") as srt_file:
-    srt_parts = ["SRT Contents:", srt_file.read()]
-  response_schema = {
-      "type": "array",
-      "items": {
-          "type": "object",
-          "properties": {
-              "start_time": {"type": "number"},
-              "end_time": {"type": "number"},
-              "text": {"type": "string"},
-              "speaker": {"type": "string", "default": None},
-              "transition_in": {
-                  "type": "string",
-                  "enum": [
-                      "slide_from_left",
-                      "slide_from_right",
-                      "slide_from_bottom",
-                      "fade_in",
-                  ],
-                  "default": "fade_in",
-              },
-              "transition_out": {
-                  "type": "string",
-                  "enum": ["fade_out"],
-                  "default": "fade_out",
-              },
-              "font_style": {
-                  "type": "string",
-                  "default": "Helvetica",
-                  "enum": [
-                      "Helvetica",
-                      "Times",
-                      "Courier",
-                      "Garamond",
-                      "Georgia",
-                      "Impact",
-                      "Lucida",
-                      "Monaco",
-                      "Palatino",
-                      "Roboto",
-                      "Rockwell",
-                      "Sans",
-                      "Serif",
-                      "Symbol",
-                      "Tahoma",
-                      "Verdana",
-                      "Zapfino",
-                  ],
-              },
-              "font_size": {"type": "number", "default": 24},
-              "position": {
-                  "type": "array",
-                  "items": {
-                      "type": "string",
-                      "enum": ["left", "center", "right", "top", "bottom"],
-                  },
-                  "minItems": 2,
-                  "maxItems": 2,
-                  "default": ["center", "center"],
-              },
-          },
-          "required": [
-              "start_time",
-              "end_time",
-              "text",
-              "transition_in",
-              "transition_out",
-              "position",
-          ],
-      },
-  }
-  response = model.generate_content(
-      [*srt_parts, article_content, serialized_scenes, task_for_prompt],
-      generation_config=generative_models.GenerationConfig(
-          temperature=1.4,
-          response_schema=response_schema,
-          response_mime_type="application/json",
-      ),
+    srt_contents = srt_file.read()
+
+  srt_parts = ["SRT Contents:", srt_contents]
+  # Find all timestamps in the SRT file
+  timestamps = re.findall(
+      r"(\d{2}:\d{2}:\d{2}),(\d{3}) --> (\d{2}:\d{2}:\d{2}),(\d{3})",
+      srt_contents,
   )
-  text_overlay_list_json = json.loads(response.text)
-  return [
-      storyboarding.TextOverlay(**overlay) for overlay in text_overlay_list_json
-  ]
+  # Extract the last end time (in hh:mm:ss,ms format)
+  if timestamps:
+    # Get end time and milliseconds
+    last_end_time, milliseconds = timestamps[-1][2], int(timestamps[-1][3])
+    h, m, s = map(int, last_end_time.split(":"))
+    total_seconds = h * 3600 + m * 60 + s
+
+    # Round up if there are milliseconds
+    if milliseconds > 0:
+      total_seconds += 1
+    srt_end_time = total_seconds
+  else:
+    print("No timestamps found in the SRT file.")
+    srt_end_time = 0
+
+  return (srt_parts, srt_end_time)
 
 
 def _describe_images(image_file_paths: list[str]) -> str:
@@ -333,6 +196,180 @@ def _describe_images(image_file_paths: list[str]) -> str:
     image_parts.extend([path, generative_models.Image.load_from_file(path)])
   response = model.generate_content([prompt, *image_parts])
   return response.text
+
+
+def serialize_scenes(scenes: list[storyboarding.ImageScene]) -> str:
+  """Convert scenes into a string format for inclusion in the Gemini prompt."""
+  serialized_scenes = []
+  for scene in scenes:
+    serialized_scenes.append(
+        f"Scene start_time: {scene.start_time}, image_path: {scene.image_path}"
+    )
+  return "\n".join(serialized_scenes)
+
+
+def create_text_overlays(
+    article_content: str,
+    srt_parts: list[str],
+    srt_end_time: int,
+    scenes: storyboarding.Scene,
+) -> list[TextOverlay]:
+  """Determines text overlays (what they say and when in the video they appear).
+
+  Uses an LLM to create text overlays, selecting relevant quotes from the
+  provided article content and positioning them appropriately within the
+  video timeline based on the SRT data and scene timings.
+
+  Args:
+      article_content: The full text content of the article.
+      srt_parts: A list containing SRT data (typically ["SRT Contents:",
+        srt_content_string]).
+      srt_end_time: The end time of the SRT data in seconds.
+      scenes: A list of `storyboarding.Scene` objects, each representing a
+        visual scene in the video, including its start time and associated
+        image.
+
+  Returns:
+      A list of `TextOverlay` objects, each defining the text, timing, and
+      styling
+      of a text overlay to be displayed in the video.  Returns an empty list if
+      the LLM
+      call fails or returns invalid JSON.
+  """
+  serialized_scenes = serialize_scenes(scenes)
+
+  task_for_prompt = textwrap.dedent("""\
+  You are a digital media expert tasked with creating impactful text overlays
+  for a narrated video based on an article.
+
+  Given:
+  Article Content: The full text of the article.
+  SRT File: A subtitle file with timestamps and corresponding text for the video
+  narration.
+  Scenes: A list of scenes with start times and background image paths.
+  Output:
+  Produce a JSON array of text overlay objects, each with the following
+  properties:
+
+  start_time: (number) When the overlay appears in the video (seconds).
+  end_time: (number) When the overlay disappears (seconds).
+  text: (string) The text to display.
+  speaker: (optional, string or null) The person quoted (from the article, not
+    the narrator).
+  transition_in: (optional, string or null) "slide_from_left",
+    "slide_from_right", "slide_from_bottom", or "fade_in".
+  transition_out: (optional, string or null) "fade_out"
+  position: (optional, array of strings) X and Y coordinates ("left", "center",
+    "right") and ("top", "center", "bottom"). Example: ["right", "center"]
+  font_style: (optional, string, default "Helvetica")
+  font_size: (optional, number, default 48) Minimum size 48. Maximum is 90.
+  background_color: (optional, string, default "black")
+
+  Rules:
+
+  Select quotes from the article that either provide essential context or evoke
+    strong emotional resonance, aligning with the article's original tone. Do
+    not make up fake quotes, only use quotation marks for the text if it is a
+    quote in the article itself.
+  Make sure to capitalize the first letter of the text, and use proper
+    punctuation.
+  Use the SRT file to ensure that the timing of the text overlays aligns with
+    the video’s narration. Never exceed the length of the SRT file.
+  Prioritize direct quotes from the article.
+  Minimum 3 words, maximum 35 words per overlay.
+  No overlays in the first 4 seconds of the video.
+  One overlay every 15-20 seconds.
+  Minimum display time per overlay: 14 seconds.
+  Overlay duration: 0.3 seconds per word + 4 seconds buffer.
+  Vary overlay positions and transitions. No two overlays should have the same x
+    or y position.
+  Ensure text is legible against the background image.
+  """)
+  model = generative_models.GenerativeModel("gemini-1.5-pro-001")
+  response_schema = {
+      "type": "array",
+      "items": {
+          "type": "object",
+          "properties": {
+              "start_time": {"type": "number", "minimum": 4},
+              "end_time": {"type": "number", "maximum": srt_end_time},
+              "text": {"type": "string"},
+              "speaker": {"type": "string", "default": ""},
+              "transition_in": {
+                  "type": "string",
+                  "enum": [
+                      "slide_from_left",
+                      "slide_from_right",
+                      "slide_from_bottom",
+                      "fade_in",
+                  ],
+                  "default": "fade_in",
+              },
+              "transition_out": {
+                  "type": "string",
+                  "enum": ["fade_out"],
+                  "default": "fade_out",
+              },
+              "font_style": {
+                  "type": "string",
+                  "default": "Helvetica",
+                  "enum": [
+                      "Helvetica",
+                      "Times",
+                      "Courier",
+                      "Garamond",
+                      "Georgia",
+                      "Impact",
+                      "Lucida",
+                      "Monaco",
+                      "Palatino",
+                      "Roboto",
+                      "Rockwell",
+                      "Sans",
+                      "Serif",
+                      "Symbol",
+                      "Tahoma",
+                      "Verdana",
+                      "Zapfino",
+                  ],
+              },
+              "font_size": {"type": "number", "minimum": 32, "maximum": 56},
+              "position": {
+                  "type": "array",
+                  "items": {
+                      "type": "string",
+                      "enum": ["left", "center", "right", "top", "bottom"],
+                  },
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "default": ["center", "center"],
+              },
+          },
+          "required": [
+              "start_time",
+              "end_time",
+              "text",
+              "font_style",
+              "font_size",
+              "transition_in",
+              "transition_out",
+              "position",
+          ],
+      },
+  }
+  response = model.generate_content(
+      [*srt_parts, article_content, serialized_scenes, task_for_prompt],
+      generation_config=generative_models.GenerationConfig(
+          temperature=1.4,
+          response_schema=response_schema,
+          response_mime_type="application/json",
+      ),
+  )
+  text_overlay_list_json = json.loads(response.text)
+  text_overlay_objects = [
+      storyboarding.TextOverlay(**overlay) for overlay in text_overlay_list_json
+  ]
+  return text_overlay_objects
 
 
 def create_scenes(
@@ -494,10 +531,14 @@ def create_storyboard_step(
       image_file_paths=image_paths,
       srt_file_path=srt_path,
   )
-  text_overlays = storyboarding.create_text_overlays(
-      article_content, srt_path, scenes
-  )
+  srt_parts, srt_end_time = _parse_srt_file(srt_path)
 
+  text_overlays = storyboarding.create_text_overlays(
+      article_content=article_content,
+      srt_parts=srt_parts,
+      srt_end_time=srt_end_time,
+      scenes=scenes,
+  )
   return storyboarding.Storyboard(
       scenes=scenes,
       main_audio_path=main_audio_path,

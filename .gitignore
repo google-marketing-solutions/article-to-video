@@ -6,6 +6,7 @@ tests/audio/generated/convert_mp3_to_wav_step/*/3_readaloud.wav
 test_red_image.jpg
 .vscode
 .angular
+atvvenv/
 config.yml
 
 # Compiled output

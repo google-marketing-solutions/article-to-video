@@ -115,12 +115,15 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
         article_content="This is the content of the article.",
     )
 
+    storyboard.background_audio_path = "background_music/mild_neutral.mp3"
+
     self.assertEqual(
         storyboard,
         storyboarding.Storyboard(
             scenes=_SCENES,
             main_audio_path="audio_path",
             text_overlays=mock_create_text_overlays.return_value,
+            background_audio_path="background_music/mild_neutral.mp3",
         ),
     )
 
@@ -180,4 +183,4 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
           scenes=_SCENES,
       )
 
-      self.assertEqual(text_overlays, _TEXT_OVERLAYS)
+    self.assertEqual(text_overlays, _TEXT_OVERLAYS)

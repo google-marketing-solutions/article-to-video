@@ -104,7 +104,8 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
     video_generator_execution.generate_video_step(self.context)
 
     mock_generate_video_step.assert_called_once_with(
-        output_path=f"{self.context.workdir}/5_withaudiovideo.mp4"
+        output_audio_path=f"{self.context.workdir}/6_finalaudio.mp3",
+        output_video_path=f"{self.context.workdir}/5_withaudiovideo.mp4",
     )
     mock_generate_video_step.return_value.process.assert_called_once_with(
         storyboard

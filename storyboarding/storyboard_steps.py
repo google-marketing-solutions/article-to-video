@@ -6,6 +6,7 @@ import textwrap
 import typing
 
 import storyboarding
+from text import sentiment_analysis_step
 from vertexai import generative_models
 
 
@@ -573,8 +574,12 @@ def create_storyboard_step(
       srt_end_time=srt_end_time,
       scenes=scenes,
   )
+  analyze_sentiment = sentiment_analysis_step.SentimentAnalyzerStep()
+  background_audio_path = analyze_sentiment.process(article_content)
+
   return storyboarding.Storyboard(
       scenes=scenes,
       main_audio_path=main_audio_path,
+      background_audio_path=background_audio_path,
       text_overlays=text_overlays,
   )

@@ -46,6 +46,8 @@ STORYBOARD_FILE_NAME = "4_storyboard.json"
 
 OUTPUT_VIDEO_FILE_NAME = "5_withaudiovideo.mp4"
 
+OUTPUT_AUDIO_FILE_NAME = "6_finalaudio.mp3"
+
 
 def generate_audio_step(context: pipeline.VideoGenerationContext):
   """Generates audio and subtitles based on the article content.
@@ -97,7 +99,8 @@ def generate_video_step(context: pipeline.VideoGenerationContext):
           storyboard_file.read(), type=storyboarding.Storyboard
       )
       video.GenerateVideoFromImagesStep(
-          output_path=f"{context.workdir}/{OUTPUT_VIDEO_FILE_NAME}"
+          output_audio_path=f"{context.workdir}/{OUTPUT_AUDIO_FILE_NAME}",
+          output_video_path=f"{context.workdir}/{OUTPUT_VIDEO_FILE_NAME}",
       ).process(storyboard)
   except (FileNotFoundError, msgspec.ValidationError, IOError):
     print("Failed to load storyboard file:", storyboard_file_path)

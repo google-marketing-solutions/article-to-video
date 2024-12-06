@@ -1,7 +1,9 @@
 import unittest
 from unittest import mock
 
+from audio import create_final_audio_step
 from moviepy import editor as mpy
+import moviepy.audio.fx.all as afx
 import numpy as np
 import parameterized
 import storyboarding
@@ -15,22 +17,36 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
 
   def test_raises_no_images_error_if_folder_contains_no_images(self):
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        'output/path'
+        'output/audio/path.mp3', 'output/video/path.mp4'
     )
     with truth.AssertThat(
         video_generation_errors.NoImagesFoundError
     ).IsRaised():
       step(storyboarding.Storyboard([], 'audio/path'))
 
+  @mock.patch.object(
+      create_final_audio_step.CreateFinalAudioStep, 'process', autospec=True
+  )
+  @mock.patch.object(afx, 'audio_loop', autospec=True)
   @mock.patch.object(mpy, 'CompositeVideoClip', autospec=True)
   @mock.patch.object(mpy, 'ImageClip', autospec=True)
   @mock.patch.object(mpy, 'AudioFileClip', autospec=True)
   def test_generates_video_from_images_returns_output_path(
-      self, mock_audio_file_clip, *_
+      self,
+      mock_audio_file_clip,
+      unused_mock_image_clip,  # unused mocks needed to mock dependencies
+      unused_mock_composite_video_clip,
+      unused_mock_audio_loop,
+      mock_final_audio_process,
   ):
-    mock_audio_file_clip.return_value.duration = 45.0
+    mock_audio_clip = mock.Mock()
+    mock_audio_clip.duration = 45.0
+    mock_audio_file_clip.return_value = mock_audio_clip
+
+    mock_final_audio_process.return_value = 'mock_audio_path'
+
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        'output/path'
+        'output/audio/path.mp3', 'output/video/path.mp4'
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
@@ -48,18 +64,32 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
 
     self.assertEqual(
         step(storyboard),
-        'output/path',
+        'output/video/path.mp4',
     )
 
+  @mock.patch.object(
+      create_final_audio_step.CreateFinalAudioStep, 'process', autospec=True
+  )
+  @mock.patch.object(afx, 'audio_loop', autospec=True)
   @mock.patch.object(mpy, 'CompositeVideoClip', autospec=True)
   @mock.patch.object(mpy, 'ImageClip', autospec=True)
   @mock.patch.object(mpy, 'AudioFileClip', autospec=True)
   def test_only_append_images_before_end_of_audio(
-      self, mock_audio_file_clip, mock_image_clip, _
+      self,
+      mock_audio_file_clip,
+      mock_image_clip,
+      unused_mock_composite_video_clip,
+      unused_mock_audio_loop,
+      mock_final_audio_process,
   ):
-    mock_audio_file_clip.return_value.duration = 15
+    mock_audio_clip = mock.Mock()
+    mock_audio_clip.duration = 15
+    mock_audio_file_clip.return_value = mock_audio_clip
+
+    mock_final_audio_process.return_value = 'mock/audio.mp3'
+
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        'output/path'
+        'output/audio/path.mp3', 'output/video/path.mp4'
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
@@ -89,6 +119,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
       ('zoom_out_fast', 'out', True),
   ])
   @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)
+  @mock.patch.object(mpy.AudioClip, 'write_audiofile', autospec=True)
   # replace each image with a 100x100 grid of random pixels.
   @mock.patch.object(
       mpy,
@@ -116,7 +147,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
       *_,
   ):
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        'output/path'
+        'output/audio/path.mp3', 'output/video/path.mp4'
     )
 
     storyboard = storyboarding.Storyboard(
@@ -143,6 +174,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
       ('panto_slow', (32, 32), False),
   ])
   @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)
+  @mock.patch.object(mpy.AudioClip, 'write_audiofile', autospec=True)
   # replace each image with a 100x100 grid of random pixels.
   @mock.patch.object(
       mpy,
@@ -165,7 +197,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
       self, animation, target, fast, mock_zoom_pan_to, *_
   ):
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        'output/path'
+        'output/audio/path.mp3', 'output/video/path.mp4'
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
@@ -194,6 +226,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
       ('slide_down', 'down'),
   ])
   @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)
+  @mock.patch.object(mpy.AudioClip, 'write_audiofile', autospec=True)
   # replace each image with a 100x100 grid of random pixels.
   @mock.patch.object(
       mpy,
@@ -216,7 +249,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
       self, animation, direction, mock_slide, *_
   ):
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        'output/path'
+        'output/audio/path.mp3', 'output/video/path.mp4'
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
@@ -237,6 +270,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
 
   @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)
+  @mock.patch.object(mpy.AudioClip, 'write_audiofile', autospec=True)
   # replace each audio file with 15 seconds of an A note.
   @mock.patch.object(
       mpy,
@@ -256,7 +290,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
   )
   def test_adds_logo(self, mock_image_clip, *_):
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        'output/path'
+        'output/audio/path.mp3', 'output/video/path.mp4'
     )
     storyboard = storyboarding.Storyboard(
         scenes=[

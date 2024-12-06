@@ -23,9 +23,9 @@ class Intensity(enum.Enum):
 class SentimentAnalyzerStep(pipeline.base.BaseStep):
   """A pipeline step that determines the sentiment of the article summary."""
 
-  def __init__(self):
+  def __init__(self, client=None):
     super().__init__()
-    self.client = language_v2.LanguageServiceClient()
+    self.client = client or language_v2.LanguageServiceClient()
     self.logger = logging.getLogger(self.__class__.__name__)
 
   def process(self, content: str) -> str:
@@ -35,7 +35,7 @@ class SentimentAnalyzerStep(pipeline.base.BaseStep):
         content: The article summary text.
 
     Returns:
-        A string with the intensity and sentiment in snake case.
+        An output path for the background music file.
     """
     type_ = language_v2.Document.Type.PLAIN_TEXT
     document = {"type_": type_, "content": content}
@@ -74,4 +74,6 @@ class SentimentAnalyzerStep(pipeline.base.BaseStep):
         result,
     )
 
-    return str(result)
+    output_path = f"background_music/{result}.mp3"
+
+    return str(output_path)

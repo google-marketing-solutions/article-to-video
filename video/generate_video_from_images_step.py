@@ -1,6 +1,7 @@
 """Video generation pipeline step for generating the base video from images."""
 
 import logging
+from audio import create_final_audio_step
 from moviepy import editor as mpy
 import numpy as np
 import pipeline
@@ -17,12 +18,14 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
 
   def __init__(
       self,
-      output_path: str,
+      output_audio_path: str,
+      output_video_path: str,
       target_resolution: tuple[int, int] = (1280, 720),
       fps: int = 25,
   ):
     self._logger = logging.getLogger(self.__class__.__name__)
-    self._output_path = output_path
+    self._output_audio_path = output_audio_path
+    self._output_video_path = output_video_path
     self._target_resolution = target_resolution
     self._fps = fps
 
@@ -88,7 +91,12 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
     if number_of_scenes == 0:
       raise video_generation_errors.NoImagesFoundError()
 
-    audio_clip = mpy.AudioFileClip(storyboard.main_audio_path)
+    final_audio_step = create_final_audio_step.CreateFinalAudioStep(
+        self._output_audio_path
+    )
+    self._logger.info("Generating final audio")
+    audio_clip_path = final_audio_step.process(storyboard)
+    audio_clip = mpy.AudioFileClip(audio_clip_path)
     audio_file_length = audio_clip.duration
 
     self._logger.info("Generating video output_video_path from:")
@@ -135,11 +143,11 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
     composite_video = mpy.CompositeVideoClip(
         clips, size=self._target_resolution
     ).set_audio(audio_clip)
-    composite_video.write_videofile(self._output_path)
+    composite_video.write_videofile(self._output_video_path)
 
     audio_clip.close()
     composite_video.close()
     for clip in clips:
       clip.close()
 
-    return self._output_path
+    return self._output_video_path

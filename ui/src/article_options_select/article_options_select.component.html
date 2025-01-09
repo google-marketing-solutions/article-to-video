@@ -1,0 +1,9 @@
+<p><mat-slide-toggle checked (change)="changedSubtitles($event)">Subtitles</mat-slide-toggle></p>
+<p><mat-slide-toggle checked>Ken Burns</mat-slide-toggle></p>
+<mat-label>Language</mat-label>
+<mat-select (selectionChange)="changedLanguage($event)" value="English (US)">
+    <mat-option value="English (US)">English (US)</mat-option>
+    <mat-option value="English (UK)">English (UK)</mat-option>
+    <mat-option value="Portuguese (Brazil)">Portuguese (Brazil)</mat-option>
+    <mat-option value="Spanish">Spanish</mat-option>
+</mat-select>

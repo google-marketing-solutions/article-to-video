@@ -1,0 +1,31 @@
+.shimmer-text {
+    display: inline-block;
+    background: linear-gradient(90deg,
+            #006992, #CCE2F6,
+            #99C5F1,
+            #4CABCE,
+            #008CBA,
+            #006992);
+    background-size: 200% auto;
+    color: #000;
+    background-clip: text;
+    -webkit-background-clip: text;
+    text-fill-color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 60s linear infinite;
+    /* 60s to run once every minute */
+    animation-timing-function: ease-in-out;
+    /* Fast shimmer effect */
+}
+
+#content {
+    margin: 16px 32px;
+}
+
+.example-spacer {
+    flex: 1 1 auto;
+}
+
+#gtech-logo {
+    height: 65%;
+}

@@ -1,0 +1,8 @@
+<p>
+  @for (image of images; track image) {
+  <img class="uploaded-image" src="{{image}}" />
+  }
+</p>
+<p>
+  <input accept="image/*" multiple (change)="onFileChange($event)" type="file" id="myFile" name="file" />
+</p>

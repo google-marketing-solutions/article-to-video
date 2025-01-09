@@ -1,0 +1,15 @@
+"""Main tests module."""
+
+from tests.audio.text_to_speech_step_test import TextToSpeechStepTest
+from tests.pipeline.ffmpeg_step_test import FfmpegStepTest
+from tests.pipeline.video_generation_context_test import VideoGenerationContextTest
+from tests.pipeline.video_generation_pipeline_test import VideoGenerationPipelineTest
+from tests.storyboarding.storyboard_steps_test import CreateStoryBoardStepsTest
+from tests.text.sentiment_analysis_step_test import SentimentAnalyzerStepTest
+from tests.text.summarize_text_step_test import SummarizeTextStepTest
+from tests.util.create_workdir_step_test import CreateWorkdirStepTest
+from tests.util.delete_workdir_step_test import DeleteWorkdirStepTest
+from tests.video.create_text_overlay_step_test import CreateTextOverlayStepTest
+from tests.video.effects_test import EffectsTest
+from tests.video.generate_video_from_images_step_test import GenerateVideoFromImagesStepTest
+from tests.video_generator_execution_test import VideoGeneratorExecutionTest

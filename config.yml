@@ -1,0 +1,6 @@
+gcp_project: "[REPLACE WITH YOUR PROJECT ID]"
+gcp_location: "us-central1"
+output_path: "output"
+gcs_bucket_name: "[REPLACE WITH YOUR GCS BUCKET]"
+gcs_bucket_text_path: "text"
+gcs_bucket_image_path: "images"

@@ -1,6 +1,7 @@
-FROM python:3.13.0-slim
+FROM python:3.13.1-slim
 
 ENV PYTHONUNBUFFERED 1
+ENV MSGPACK_PUREPYTHON 1
 
 WORKDIR /usr/src/app
 
@@ -17,7 +18,7 @@ RUN apt-get update && apt-get install -y nodejs npm
 RUN npm install -g n
 RUN n stable
 
-RUN apt-get update && apt-get install -y ffmpeg
+RUN apt-get update && apt-get install -y imagemagick ffmpeg
 
 COPY requirements.txt ./
 RUN pip install -r requirements.txt

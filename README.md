@@ -93,6 +93,16 @@ From the base folder, run
 python3 -m unittest
 ```
 
+## Upgrading Dependencies
+
+pip-compile is used to generate the ```requirements.txt``` file. To update
+dependencies, make changes to ```requirements.in``` and then use the following
+command:
+
+```
+pip-compile requirements.in --generate-hashes --upgrade
+```
+
 # Disclaimer:
 Copyright 2024 Google LLC. This solution, including any related sample code or
 data, is made available on an “as is,” “as available,” and “with all faults”

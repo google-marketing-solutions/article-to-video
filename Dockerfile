@@ -8,7 +8,9 @@ WORKDIR /usr/src/app
 RUN mkdir output
 
 RUN apt-get update && apt-get install -y apt-utils
-RUN pip install --upgrade pip
+RUN python3 -m ensurepip --upgrade
+
+
 
 # Dependencies for scipy
 RUN apt-get update && apt-get install -y build-essential gcc g++ gfortran libopenblas-dev liblapack-dev pkg-config curl
@@ -21,7 +23,7 @@ RUN n stable
 RUN apt-get update && apt-get install -y imagemagick ffmpeg
 
 COPY requirements.txt ./
-RUN pip install -r requirements.txt
+RUN pip install --require-hashes -r requirements.txt
 
 COPY . ./
 

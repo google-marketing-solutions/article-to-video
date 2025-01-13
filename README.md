@@ -27,7 +27,7 @@ This solution is still under development and should be considered experimental.
 ### Standalone (CLI)
 
 ```bash
-usage: video_generator_execution.py [-h] [--config CONFIG] [--video_id VIDEO_ID] --article_path ARTICLE_PATH --image_dir IMAGE_DIR [--single_voice] [--step {audio,storyboard,video}] [--debug]
+usage: video_generator_execution.py [-h] [--config CONFIG] [--video_id VIDEO_ID] --article_path ARTICLE_PATH --image_dir IMAGE_DIR [--step {audio,storyboard,video}] [--debug]
 
 options:
   -h, --help            show this help message and exit
@@ -38,7 +38,6 @@ options:
                         Path to the article text file.
   --image_dir IMAGE_DIR, -i IMAGE_DIR
                         Path to the directory containing images.
-  --single_voice        Use a single voice for all narration. Defaults to False (multivoice).
   --step {audio,storyboard,video}
                         Run a discrete step in the video generation flow.
   --debug, -d           Enable debug logging.

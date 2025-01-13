@@ -32,7 +32,11 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
       language_code="en-US", name="en-US-Studio-MultiSpeaker"
   )
 
-  _OUTPUT_AUDIO_FILE = "2_readaloud.mp3"
+  _OUTPUT_AUDIO_FILE = "2_readaloud.wav"
+
+  _AUDIO_CONFIG = texttospeech.AudioConfig(
+      audio_encoding=texttospeech.AudioEncoding.LINEAR16
+  )
 
   def __init__(self, context: pipeline.VideoGenerationContext):
     super().__init__(context)
@@ -91,12 +95,8 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
         ssml_gender=voice_params["gender"],
     )
 
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
-    )
-
     response = client.synthesize_speech(
-        input=synthesis_input, voice=voice, audio_config=audio_config
+        input=synthesis_input, voice=voice, audio_config=self._AUDIO_CONFIG
     )
 
     with open(output_path, "wb") as out:
@@ -132,12 +132,9 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
         multi_speaker_markup=multi_speaker_markup
     )
     voice = self._MULTIVOICE_LANGUAGE_MAPPINGS
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
-    )
 
     response = client.synthesize_speech(
-        input=synthesis_input, voice=voice, audio_config=audio_config
+        input=synthesis_input, voice=voice, audio_config=self._AUDIO_CONFIG
     )
 
     with open(output_path, "wb") as out:

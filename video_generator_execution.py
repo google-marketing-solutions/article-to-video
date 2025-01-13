@@ -38,7 +38,7 @@ import vertexai
 import video
 import yaml
 
-AUDIO_FILE_NAME = "2_readaloud.mp3"
+AUDIO_FILE_NAME = "2_readaloud.wav"
 
 SRT_FILE_NAME = "3_subtitles.srt"
 
@@ -147,13 +147,10 @@ def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:
       help="Path to the directory containing images.",
   )
   parser.add_argument(
-      "--single_voice",
+      "--multi_voice",
       action="store_true",
       default=False,
-      help=(
-          "Use a single voice for all narration. Defaults to False"
-          " (multivoice)."
-      ),
+      help=argparse.SUPPRESS,
   )
   parser.add_argument(
       "--step",
@@ -203,7 +200,7 @@ def main(args=sys.argv[1:]):
       request_params={
           "article_content": parsed_args.article_path.read(),
           "image_paths": _get_image_paths(parsed_args.image_dir),
-          "multivoice": not parsed_args.single_voice,
+          "multivoice": parsed_args.multi_voice,
       },
       video_id=parsed_args.video_id or str(uuid.uuid4()),
   )

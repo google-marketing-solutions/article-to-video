@@ -5,7 +5,6 @@ import audio
 from audio import subtitles_generation_step
 import pipeline
 from util import gcs_utils
-from util.errors import GeminiError
 
 
 class TextToSpeechStepTest(unittest.TestCase):
@@ -28,64 +27,128 @@ class TextToSpeechStepTest(unittest.TestCase):
             "output_path": "tests/audio/generated",
         },
         request_params={},
-        video_id="somevideoid",
+        video_id="testvideoid",
     )
 
-  @mock.patch.object(subtitles_generation_step.vertexai, "init")
-  @mock.patch.object(subtitles_generation_step, "GenerativeModel")
-  def test_invalid_srt_format_throws_error(self, mock_generative_model, _):
-    """Test that GeminiError is raised when model response is invalid."""
-
-    subtitles = (
-        "This file is not valid.\n"
-        "1\n"
-        "00:00:00,000 --> 00:00:02,000\n"
-        "This is the first subtitle.\n"
+  def test_remove_end_punctuation_success(self):
+    input_string = "'off-white'."
+    expected = "off-white"
+    self.assertEqual(
+        subtitles_generation_step.SubtitlesGenerationStep.remove_end_punctuation(
+            input_string
+        ),
+        expected,
     )
 
-    mock_model = mock_generative_model()
-    mock_model.generate_content.return_value.text = subtitles
-    summary_text = "This file is not valid."
-    audio_path = "audio_link_gcs"
-    step = audio.subtitles_generation_step.SubtitlesGenerationStep(self.context)
 
-    with self.assertRaises(GeminiError):
-      step((audio_path, summary_text))
-
-  @mock.patch.object(
-      gcs_utils,
-      "upload_to_gcs",
-      return_value="gs://my_bucket_name/subtitles.srt",
+def test_get_similarity_score(self):
+  word1 = "property's"
+  word2 = "properties"
+  word3 = "property"
+  self.assertEqual(
+      subtitles_generation_step.SubtitlesGenerationStep.get_similarity_score(
+          word1, word2
+      ),
+      6 / 9,
   )
-  @mock.patch.object(subtitles_generation_step.vertexai, "init")
-  @mock.patch.object(subtitles_generation_step, "GenerativeModel")
-  def test_srt_file_output_success(self, mock_generative_model, *_):
-    """Test that SRT file successfully written."""
+  self.assertEqual(
+      subtitles_generation_step.SubtitlesGenerationStep.get_similarity_score(
+          word1, word3
+      ),
+      6 / 8,
+  )
 
-    subtitles = (
-        "1\n"
-        "00:00:00,000 --> 00:00:02,000\n"
-        "This is the first subtitle.\n"
-        "2\n"
-        "00:00:20,000 --> 00:00:04,400\n"
-        "This is the second subtitle.\n"
-    )
 
-    mock_model = mock_generative_model()
-    mock_model.generate_content.return_value.text = subtitles
-    summary_text = "This is an example."
-    audio_path = "audio_link_gcs"
-    step = audio.subtitles_generation_step.SubtitlesGenerationStep(self.context)
-    output_path = "tests/audio/generated/somevideoid/subtitles.srt"
+@mock.patch.object(
+    gcs_utils,
+    "upload_to_gcs",
+    return_value="gs://my_bucket_name/subtitles.srt",
+)
+@mock.patch.object(
+    subtitles_generation_step.speech_v1.SpeechClient, "long_running_recognize"
+)
+def test_srt_file_output_success(self, mock_long_running_recognize, _):
+  """Test that SRT file successfully written."""
 
-    with mock.patch("builtins.open", mock.mock_open()) as mocked_file:
-      srt_text = step((audio_path, summary_text))
-      mocked_file.assert_any_call(output_path, "w")
-      self.assertEqual(srt_text[1], "gs://my_bucket_name/subtitles.srt")
+  mock_long_running_recognize.return_value = {
+      "results": [{
+          "alternatives": [{
+              "transcript": (
+                  "Welcome, to todays news update. This is the sub title."
+              ),
+              "words": [
+                  {
+                      "start_time": "0:00:00",
+                      "end_time": "0:00:00.500000",
+                      "word": "Welcome,",
+                  },
+                  {
+                      "start_time": "0:00:00.500000",
+                      "end_time": "0:00:00.800000",
+                      "word": "to",
+                  },
+                  {
+                      "start_time": "0:00:00.800000",
+                      "end_time": "0:00:00.900000",
+                      "word": "todays",
+                  },
+                  {
+                      "start_time": "0:00:00.900000",
+                      "end_time": "0:00:01.400000",
+                      "word": "news",
+                  },
+                  {
+                      "start_time": "0:00:01.400000",
+                      "end_time": "0:00:01.900000",
+                      "word": "update.",
+                  },
+                  {
+                      "start_time": "0:00:01.900000",
+                      "end_time": "0:00:02.700000",
+                      "word": "This",
+                  },
+                  {
+                      "start_time": "0:00:02.700000",
+                      "end_time": "0:00:03",
+                      "word": "is",
+                  },
+                  {
+                      "start_time": "0:00:03",
+                      "end_time": "0:00:03.300000",
+                      "word": "the",
+                  },
+                  {
+                      "start_time": "0:00:03.300000",
+                      "end_time": "0:00:03.800000",
+                      "word": "sub",
+                  },
+                  {
+                      "start_time": "0:00:03.800000",
+                      "end_time": "0:00:04.200000",
+                      "word": "title.",
+                  },
+              ],
+          }]
+      }]
+  }
+  transcript_text = "Welcome to today's news update. This is the subtitle."
+  expected_subtitles = (
+      "1\n"
+      "00:00:00,000 --> 00:00:01.900\n"
+      "Welcome to today's news update.\n"
+      "2\n"
+      "00:00:01.900 --> 00:00:04.200\n"
+      "This is the subtitle.\n"
+  )
 
-      # self.assertEqual(
-      #     srt_text[1], "tests/audio/generated/somevideoid/subtitles.srt"
-      # )
+  step = audio.subtitles_generation_step.SubtitlesGenerationStep(self.context)
+  output_path = "tests/audio/generated/testvideoid/subtitles.srt"
+
+  with mock.patch("builtins.open", mock.mock_open()) as mock_file:
+    srt_file_path = step("gs://my_bucket_name/fake_audio.wav", transcript_text)
+    mock_file.assert_called_once_with(output_path, "w")
+    mock_file.return_value.write.assert_called_once_with(expected_subtitles)
+    self.assertEqual(srt_file_path, "gs://my_bucket_name/subtitles.srt")
 
 
 if __name__ == "__main__":

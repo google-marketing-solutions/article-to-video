@@ -46,11 +46,11 @@ class TextToSpeechStepTest(unittest.TestCase):
       audio_path = step.generate_single_voice(summary_text)
 
     mocked_file.assert_called_once_with(
-        "tests/audio/generated/somevideoid/2_readaloud.mp3", "wb"
+        "tests/audio/generated/somevideoid/2_readaloud.wav", "wb"
     )
     mocked_file().write.assert_called_once_with(b"fake_audio_data")
     self.assertEqual(
-        audio_path, "tests/audio/generated/somevideoid/2_readaloud.mp3"
+        audio_path, "tests/audio/generated/somevideoid/2_readaloud.wav"
     )
 
   @mock.patch("audio.text_to_speech_step.texttospeech.TextToSpeechClient")
@@ -73,11 +73,11 @@ class TextToSpeechStepTest(unittest.TestCase):
       audio_path = step.generate_multivoice_audio(multivoice_transcript)
 
     mocked_file.assert_called_once_with(
-        "tests/audio/generated/somevideoid/2_readaloud.mp3", "wb"
+        "tests/audio/generated/somevideoid/2_readaloud.wav", "wb"
     )
     mocked_file().write.assert_called_once_with(b"fake_audio_data")
     self.assertEqual(
-        audio_path, "tests/audio/generated/somevideoid/2_readaloud.mp3"
+        audio_path, "tests/audio/generated/somevideoid/2_readaloud.wav"
     )
 
 

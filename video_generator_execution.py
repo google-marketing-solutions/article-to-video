@@ -102,8 +102,18 @@ def generate_video_step(context: pipeline.VideoGenerationContext):
           output_audio_path=f"{context.workdir}/{OUTPUT_AUDIO_FILE_NAME}",
           output_video_path=f"{context.workdir}/{OUTPUT_VIDEO_FILE_NAME}",
       ).process(storyboard)
-  except (FileNotFoundError, msgspec.ValidationError, IOError):
-    print("Failed to load storyboard file:", storyboard_file_path)
+  except FileNotFoundError:
+    logging.exception("Storyboard file not found: %s", storyboard_file_path)
+  except msgspec.ValidationError as e:
+    logging.exception(
+        "Invalid storyboard JSON: %s \n Error: %s \n", storyboard_file_path, e
+    )
+  except IOError as e:
+    logging.exception(
+        "Unable to process storyboard file: %s \n Error: %s \n",
+        storyboard_file_path,
+        e,
+    )
 
 
 def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:

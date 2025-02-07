@@ -262,9 +262,6 @@ def create_text_overlays(
   transition_out: (optional, string or null) "fade_out"
   position: (optional, array of strings) X and Y coordinates ("left", "center",
     "right") and ("top", "center", "bottom"). Example: ["right", "center"]
-  font_style: (optional, string, default "Helvetica")
-  font_size: (optional, number, default 48) Minimum size 48. Maximum is 90.
-  background_color: (optional, string, default "black")
 
   Rules:
 
@@ -311,35 +308,21 @@ def create_text_overlays(
                   "enum": ["fade_out"],
                   "default": "fade_out",
               },
-              "font_style": {
-                  "type": "string",
-                  "default": "Helvetica",
-                  "enum": [
-                      "Helvetica",
-                      "Times",
-                      "Courier",
-                      "Garamond",
-                      "Georgia",
-                      "Impact",
-                      "Lucida",
-                      "Monaco",
-                      "Palatino",
-                      "Roboto",
-                      "Rockwell",
-                      "Sans",
-                      "Serif",
-                      "Symbol",
-                      "Tahoma",
-                      "Verdana",
-                      "Zapfino",
-                  ],
-              },
-              "font_size": {"type": "number", "minimum": 32, "maximum": 56},
               "position": {
                   "type": "array",
                   "items": {
                       "type": "string",
-                      "enum": ["left", "center", "right", "top", "bottom"],
+                      "enum": [
+                          "left",
+                          "center",
+                          "right",
+                          "top",
+                          # Removing "bottom" to not conflict with burned in
+                          # subtitles.
+                          # TODO(cfeldman): Ensure "bottom" position doesn't
+                          # conflict with subtitles and then re-enable.
+                          # "bottom",
+                      ],
                   },
                   "minItems": 2,
                   "maxItems": 2,
@@ -350,8 +333,6 @@ def create_text_overlays(
               "start_time",
               "end_time",
               "text",
-              "font_style",
-              "font_size",
               "transition_in",
               "transition_out",
               "position",
@@ -550,6 +531,7 @@ def create_storyboard_step(
     main_audio_path: str,
     srt_path: str,
     article_content: str,
+    generate_text_overlays: bool,
 ) -> storyboarding.Storyboard:
   """Assembles a Storyboard for video generation.
 
@@ -558,6 +540,7 @@ def create_storyboard_step(
     main_audio_path: The file path for the main audio (narration)
     srt_path: The file path for the SRT file
     article_content: Text of the article.
+    generate_text_overlays: Disable text overlay generation.
 
   Returns:
     A Storyboard.
@@ -568,12 +551,16 @@ def create_storyboard_step(
   )
   srt_parts, srt_end_time = _parse_srt_file(srt_path)
 
-  text_overlays = create_text_overlays(
-      article_content=article_content,
-      srt_parts=srt_parts,
-      srt_end_time=srt_end_time,
-      scenes=scenes,
-  )
+  if generate_text_overlays:
+    text_overlays = create_text_overlays(
+        article_content=article_content,
+        srt_parts=srt_parts,
+        srt_end_time=srt_end_time,
+        scenes=scenes,
+    )
+  else:
+    text_overlays = []
+
   analyze_sentiment = sentiment_analysis_step.SentimentAnalyzerStep()
   background_audio_path = analyze_sentiment.process(article_content)
 
@@ -582,4 +569,5 @@ def create_storyboard_step(
       main_audio_path=main_audio_path,
       background_audio_path=background_audio_path,
       text_overlays=text_overlays,
+      srt_path=srt_path,
   )

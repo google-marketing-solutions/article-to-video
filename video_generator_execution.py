@@ -79,6 +79,7 @@ def generate_storyboard_step(context: pipeline.VideoGenerationContext):
       image_paths=context.image_paths,
       main_audio_path=f"{context.workdir}/{AUDIO_FILE_NAME}",
       srt_path=f"{context.workdir}/{SRT_FILE_NAME}",
+      generate_text_overlays=not context.disable_text_overlays,
   )
   with open(
       f"{context.workdir}/{STORYBOARD_FILE_NAME}", "w", encoding="utf-8"
@@ -101,6 +102,7 @@ def generate_video_step(context: pipeline.VideoGenerationContext):
       video.GenerateVideoFromImagesStep(
           output_audio_path=f"{context.workdir}/{OUTPUT_AUDIO_FILE_NAME}",
           output_video_path=f"{context.workdir}/{OUTPUT_VIDEO_FILE_NAME}",
+          burn_in_subtitles=context.burn_in_subtitles,
       ).process(storyboard)
   except FileNotFoundError:
     logging.exception("Storyboard file not found: %s", storyboard_file_path)
@@ -157,6 +159,18 @@ def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:
       help="Path to the directory containing images.",
   )
   parser.add_argument(
+      "--disable_text_overlays",
+      action="store_true",
+      default=False,
+      help="Disables text overlay generation.",
+  )
+  parser.add_argument(
+      "--burn_in_subtitles",
+      action="store_true",
+      default=False,
+      help="When provided, subtitles will be burned into the content.",
+  )
+  parser.add_argument(
       "--multi_voice",
       action="store_true",
       default=False,
@@ -211,6 +225,8 @@ def main(args=sys.argv[1:]):
           "article_content": parsed_args.article_path.read(),
           "image_paths": _get_image_paths(parsed_args.image_dir),
           "multivoice": parsed_args.multi_voice,
+          "disable_text_overlays": parsed_args.disable_text_overlays,
+          "burn_in_subtitles": parsed_args.burn_in_subtitles,
       },
       video_id=parsed_args.video_id or str(uuid.uuid4()),
   )

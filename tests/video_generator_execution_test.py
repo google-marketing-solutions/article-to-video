@@ -75,6 +75,7 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
         scenes=[],
         main_audio_path="path/to/audio",
         background_audio_path="path/to/background_audio",
+        srt_path="srt/path",
     )
     create_workdir_step.CreateWorkdirStep(self.context)("article content")
 
@@ -95,6 +96,7 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
         scenes=[],
         main_audio_path="path/to/audio",
         background_audio_path="path/to/background_audio",
+        srt_path="srt/path",
     )
     with open(
         self.context.workdir + "/4_storyboard.json", "w", encoding="utf-8"
@@ -106,6 +108,7 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
     mock_generate_video_step.assert_called_once_with(
         output_audio_path=f"{self.context.workdir}/6_finalaudio.mp3",
         output_video_path=f"{self.context.workdir}/5_withaudiovideo.mp4",
+        burn_in_subtitles=False,
     )
     mock_generate_video_step.return_value.process.assert_called_once_with(
         storyboard
@@ -144,7 +147,7 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
       ("gcs_bucket_image_path", "images"),
       ("video_id", "test_video_id"),
       ("language", "en-US"),
-      ("multivoice", True),
+      ("multivoice", False),
       ("sentiment", False),
       ("video_overlay", False),
       ("title", False),

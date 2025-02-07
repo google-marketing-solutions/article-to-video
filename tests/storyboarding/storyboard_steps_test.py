@@ -101,7 +101,7 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
     def mock_open_side_effect(file, *_args, **_kwargs):
       if file == "./output/text_overlays.json":
         return mock.mock_open(read_data=_TEXT_OVERLAYS_TEXT_FILE).return_value
-      elif file == "srt_path":
+      elif file == "/srt/path":
         return mock.mock_open(read_data=_SRT_FILE_CONTENT).return_value
       else:
         raise FileNotFoundError(f"Mock for {file} not found.")
@@ -111,8 +111,9 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
     storyboard = storyboarding.create_storyboard_step(
         image_paths=["image/path/1", "image/path/2"],
         main_audio_path="audio_path",
-        srt_path="srt_path",
+        srt_path="/srt/path",
         article_content="This is the content of the article.",
+        generate_text_overlays=True,
     )
 
     storyboard.background_audio_path = "background_music/mild_neutral.mp3"
@@ -124,6 +125,7 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
             main_audio_path="audio_path",
             text_overlays=mock_create_text_overlays.return_value,
             background_audio_path="background_music/mild_neutral.mp3",
+            srt_path="/srt/path",
         ),
     )
 

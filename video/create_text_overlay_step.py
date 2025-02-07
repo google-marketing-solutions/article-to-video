@@ -241,13 +241,15 @@ def create_text_overlay_video_clip(
       TextClip(
           wrap_text_by_words(text_overlay.text, 6),
           fontsize=text_overlay.font_size or 30,
-          font="Helvetica",
+          font=text_overlay.font_style,
           color=text_overlay.font_color,
           bg_color=text_overlay.background_color,
           method=text_overlay.method,
           align=text_overlay.alignment,
           interline=-1,
           size=size,
+          # stroke_color="white",
+          # stroke_width=2.0,
       )
       .set_start(text_overlay.start_time)
       .set_duration(text_overlay.end_time - text_overlay.start_time)

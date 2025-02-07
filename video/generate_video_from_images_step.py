@@ -3,6 +3,7 @@
 import logging
 from audio import create_final_audio_step
 from moviepy import editor as mpy
+from moviepy.video.tools import subtitles as mpy_subtitles
 import numpy as np
 import pipeline
 import storyboarding
@@ -20,6 +21,7 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
       self,
       output_audio_path: str,
       output_video_path: str,
+      burn_in_subtitles: bool = False,
       target_resolution: tuple[int, int] = (1280, 720),
       fps: int = 25,
   ):
@@ -28,6 +30,7 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
     self._output_video_path = output_video_path
     self._target_resolution = target_resolution
     self._fps = fps
+    self._burn_in_subtitles = burn_in_subtitles
 
   def create_scene(
       self, scene: storyboarding.Scene, duration: float
@@ -139,6 +142,22 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
           .set_pos(("right", "top"))
           .margin(right=_LOGO_MARGIN, top=_LOGO_MARGIN, opacity=0)
       )
+
+    if self._burn_in_subtitles:
+      subtitles = mpy_subtitles.SubtitlesClip(
+          storyboard.srt_path,
+          lambda text: mpy.TextClip(
+              text,
+              font="Helvetica-Bold",
+              fontsize=32,
+              color="white",
+              stroke_color="black",
+              stroke_width=1.0,
+          ),
+      )
+      subtitle_bottom_margin = self._target_resolution[1] - 32 - 64
+      subtitles = subtitles.set_position(("center", subtitle_bottom_margin))
+      clips.append(subtitles)
 
     composite_video = mpy.CompositeVideoClip(
         clips, size=self._target_resolution

@@ -22,7 +22,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     with truth.AssertThat(
         video_generation_errors.NoImagesFoundError
     ).IsRaised():
-      step(storyboarding.Storyboard([], 'audio/path'))
+      step(storyboarding.Storyboard([], 'audio/path', 'srt/path'))
 
   @mock.patch.object(
       create_final_audio_step.CreateFinalAudioStep, 'process', autospec=True
@@ -46,7 +46,8 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     mock_final_audio_process.return_value = 'mock_audio_path'
 
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
-        'output/audio/path.mp3', 'output/video/path.mp4'
+        'output/audio/path.mp3',
+        'output/video/path.mp4',
     )
     storyboard = storyboarding.Storyboard(
         scenes=[
@@ -60,6 +61,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
             ),
         ],
         main_audio_path='/my/audio',
+        srt_path='/srt/path',
     )
 
     self.assertEqual(
@@ -103,6 +105,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
             ),
         ],
         main_audio_path='/my/audio',
+        srt_path='/srt/path',
     )
 
     step(storyboard)
@@ -159,6 +162,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
             ),
         ],
         main_audio_path='/my/audio',
+        srt_path='/srt/path',
     )
 
     step(storyboard)
@@ -209,6 +213,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
             ),
         ],
         main_audio_path='/my/audio',
+        srt_path='/srt/path',
     )
 
     step(storyboard)
@@ -260,6 +265,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
             ),
         ],
         main_audio_path='/my/audio',
+        srt_path='srt/path',
     )
 
     step(storyboard)
@@ -301,6 +307,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
         ],
         main_audio_path='/my/audio',
         logo_path='path/to/my/logo.png',
+        srt_path='/srt/path',
     )
 
     step(storyboard)

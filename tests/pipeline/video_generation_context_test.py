@@ -38,7 +38,8 @@ class VideoGenerationContextTest(unittest.TestCase):
     )
 
     AssertThat(context.ken_burns).IsFalse()
-    AssertThat(context.burned_in_subtitles).IsFalse()
+    AssertThat(context.disable_text_overlays).IsFalse()
+    AssertThat(context.burn_in_subtitles).IsFalse()
     AssertThat(context.language).IsEqualTo('en-US')
     AssertThat(context.sentiment).IsFalse()
     AssertThat(context.video_overlay).IsFalse()
@@ -47,7 +48,7 @@ class VideoGenerationContextTest(unittest.TestCase):
   def test_loading_request_params(self):
     request_params = {
         'ken_burns': True,
-        'burned_in_subtitles': True,
+        'burned_in_subtitles': False,
         'language_of_article': 'Portuguese (Brazil)',
         'sentiment': True,
         'video_overlay': True,
@@ -58,7 +59,7 @@ class VideoGenerationContextTest(unittest.TestCase):
     )
 
     AssertThat(context.ken_burns).IsTrue()
-    AssertThat(context.burned_in_subtitles).IsTrue()
+    AssertThat(context.burn_in_subtitles).IsFalse()
     AssertThat(context.language).IsEqualTo('pt-BR')
     AssertThat(context.sentiment).IsTrue()
     AssertThat(context.video_overlay).IsTrue()

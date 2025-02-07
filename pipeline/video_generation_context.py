@@ -150,7 +150,10 @@ class VideoGenerationContext:
     # TODO(cfeldman): Remove ken_burns option from UI and then delete from
     # context. This is currently a no-op.
     self.ken_burns = request_params.get('ken_burns', False)
-    self.burned_in_subtitles = request_params.get('burned_in_subtitles', False)
+    self.disable_text_overlays = request_params.get(
+        'disable_text_overlays', False
+    )
+    self.burn_in_subtitles = request_params.get('burn_in_subtitles', False)
     self.language = self._LANGUAGE_CODES.get(
         request_params.get('language_of_article'), 'en-US'
     )

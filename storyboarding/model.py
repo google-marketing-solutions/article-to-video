@@ -56,9 +56,9 @@ class TextOverlay:
   speaker: Optional[str] = None
   transition_in: Optional[str] = None
   transition_out: Optional[str] = None
-  font_style: str = "Helvetica"
-  font_size: int = 24
-  background_color: str = "black"
+  font_style: str = "Verdana-Bold"
+  font_size: int = 48
+  background_color: str = "rgba(0, 0, 0, 0.5)"
   alignment: str = "West"
   position: Tuple[str, str] = ("center", "center")
   method: str = "label"
@@ -113,6 +113,7 @@ class TextOverlay:
 class Storyboard:
   scenes: list[Scene]
   main_audio_path: str
+  srt_path: str
   background_audio_path: Optional[str] = None
   text_overlays: list[TextOverlay] = dataclasses.field(default_factory=list)
   logo_path: Optional[str] = None

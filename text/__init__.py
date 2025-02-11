@@ -1,3 +1,8 @@
 """Module for pipeline steps that change the text."""
-from text import sentiment_analysis_step
-from text import summarize_text_step
+
+from .script_generation import ScriptGenerator
+from .script_generation import VoiceoverScript
+from .script_generation import VoiceoverSpeaker
+from .script_generation import VoiceoverStatement
+from .sentiment_analysis_step import SentimentAnalyzerStep
+from .summarize_text_step import SummarizeTextStep

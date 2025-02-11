@@ -32,6 +32,7 @@ from audio import text_to_speech_step
 import msgspec
 import pipeline
 import storyboarding
+import text
 from text import summarize_text_step
 from util import create_workdir_step
 import vertexai
@@ -58,10 +59,16 @@ def generate_audio_step(context: pipeline.VideoGenerationContext):
   Args:
     context: A VideoGenerationContext object.
   """
+  script_generator = text.ScriptGenerator(
+      speakers=2 if context.multivoice else 1,
+      language=context.language,
+  )
   pipeline.Pipeline(
       steps=[
           create_workdir_step.CreateWorkdirStep(context),
-          summarize_text_step.SummarizeTextStep(context),
+          summarize_text_step.SummarizeTextStep(
+              context.workdir, script_generator
+          ),
           text_to_speech_step.TextToSpeechStep(context),
           subtitles_generation_step.SubtitlesGenerationStep(context),
       ]
@@ -177,6 +184,13 @@ def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:
       help=argparse.SUPPRESS,
   )
   parser.add_argument(
+      "--language",
+      "-l",
+      default="en-US",
+      choices=["en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "pt-BR"],
+      help="The language for the output video. Defaults to 'en-US'.",
+  )
+  parser.add_argument(
       "--step",
       choices=["audio", "storyboard", "video"],
       default=None,
@@ -227,6 +241,7 @@ def main(args=sys.argv[1:]):
           "multivoice": parsed_args.multi_voice,
           "disable_text_overlays": parsed_args.disable_text_overlays,
           "burn_in_subtitles": parsed_args.burn_in_subtitles,
+          "language": parsed_args.language,
       },
       video_id=parsed_args.video_id or str(uuid.uuid4()),
   )

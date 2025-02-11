@@ -3,9 +3,11 @@ import unittest
 from unittest import mock
 from audio import text_to_speech_step
 import pipeline
+import text
 from util import gcs_utils
 
 
+@mock.patch.object(gcs_utils, "upload_to_gcs", autospec=True)
 class TextToSpeechStepTest(unittest.TestCase):
 
   @classmethod
@@ -32,53 +34,30 @@ class TextToSpeechStepTest(unittest.TestCase):
     )
 
   @mock.patch("audio.text_to_speech_step.texttospeech.TextToSpeechClient")
-  def test_generate_single_voice_creates_audio_file(
-      self, mock_text_to_speech_client
-  ):
+  def test_creates_audio_file(self, mock_text_to_speech_client, _):
     """Test that single-voice audio is generated and saved correctly."""
     step = text_to_speech_step.TextToSpeechStep(self.context)
-    summary_text = "Hello world"
     mock_client = mock_text_to_speech_client.return_value
     mock_client.synthesize_speech.return_value.audio_content = (
         b"fake_audio_data"
     )
-    with mock.patch("builtins.open", mock.mock_open()) as mocked_file:
-      audio_path = step.generate_single_voice(summary_text)
 
-    mocked_file.assert_called_once_with(
+    mock_open = mock.mock_open()
+    with mock.patch("builtins.open", mock_open) as mocked_file:
+      step(
+          text.VoiceoverScript(
+              "language",
+              "voice",
+              [],
+              [],
+              "script_text",
+          )
+      )
+
+    mock_open.assert_called_once_with(
         "tests/audio/generated/somevideoid/2_readaloud.wav", "wb"
     )
     mocked_file().write.assert_called_once_with(b"fake_audio_data")
-    self.assertEqual(
-        audio_path, "tests/audio/generated/somevideoid/2_readaloud.wav"
-    )
-
-  @mock.patch("audio.text_to_speech_step.texttospeech.TextToSpeechClient")
-  def test_generate_multivoice_audio_creates_audio_file(
-      self, mock_text_to_speech_client
-  ):
-    """Test that multi-voice audio is generated and saved correctly."""
-    step = text_to_speech_step.TextToSpeechStep(self.context)
-    multivoice_transcript = {
-        "narration": [
-            {"name": "Anchor 1", "statement": "Hello"},
-            {"name": "Anchor 2", "statement": "world"},
-        ]
-    }
-    mock_client = mock_text_to_speech_client.return_value
-    mock_client.synthesize_speech.return_value.audio_content = (
-        b"fake_audio_data"
-    )
-    with mock.patch("builtins.open", mock.mock_open()) as mocked_file:
-      audio_path = step.generate_multivoice_audio(multivoice_transcript)
-
-    mocked_file.assert_called_once_with(
-        "tests/audio/generated/somevideoid/2_readaloud.wav", "wb"
-    )
-    mocked_file().write.assert_called_once_with(b"fake_audio_data")
-    self.assertEqual(
-        audio_path, "tests/audio/generated/somevideoid/2_readaloud.wav"
-    )
 
 
 if __name__ == "__main__":

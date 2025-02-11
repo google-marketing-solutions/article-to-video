@@ -5,6 +5,7 @@ from tests.pipeline.ffmpeg_step_test import FfmpegStepTest
 from tests.pipeline.video_generation_context_test import VideoGenerationContextTest
 from tests.pipeline.video_generation_pipeline_test import VideoGenerationPipelineTest
 from tests.storyboarding.storyboard_steps_test import CreateStoryBoardStepsTest
+from tests.text.script_generation_test import ScriptGenerationTest
 from tests.text.sentiment_analysis_step_test import SentimentAnalyzerStepTest
 from tests.text.summarize_text_step_test import SummarizeTextStepTest
 from tests.util.create_workdir_step_test import CreateWorkdirStepTest

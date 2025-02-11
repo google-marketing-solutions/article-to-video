@@ -27,7 +27,8 @@ This solution is still under development and should be considered experimental.
 ### Standalone (CLI)
 
 ```bash
-usage: video_generator_execution.py [-h] [--config CONFIG] [--video_id VIDEO_ID] --article_path ARTICLE_PATH --image_dir IMAGE_DIR [--disable_text_overlays] [--burn_in_subtitles] [--step {audio,storyboard,video}] [--debug]
+usage: video_generator_execution.py [-h] [--config CONFIG] [--video_id VIDEO_ID] --article_path ARTICLE_PATH --image_dir IMAGE_DIR [--disable_text_overlays]
+                                    [--burn_in_subtitles] [--language {en-US,en-GB,fr-FR,de-DE,es-ES,pt-BR}] [--step {audio,storyboard,video}] [--debug]
 
 options:
   -h, --help            show this help message and exit
@@ -41,6 +42,8 @@ options:
   --disable_text_overlays
                         Disables text overlay generation.
   --burn_in_subtitles   When provided, subtitles will be burned into the content.
+  --language {en-US,en-GB,fr-FR,de-DE,es-ES,pt-BR}, -l {en-US,en-GB,fr-FR,de-DE,es-ES,pt-BR}
+                        The language for the output video. Defaults to 'en-US'.
   --step {audio,storyboard,video}
                         Run a discrete step in the video generation flow.
   --debug, -d           Enable debug logging.

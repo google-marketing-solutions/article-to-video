@@ -1,70 +1,37 @@
 """Article summary generation pipeline step."""
 
-import textwrap
-
+import logging
 import pipeline
-from vertexai import generative_models
+from . import script_generation
 
 
-class SummarizeTextStep(pipeline.VideoGenerationStep):
-  """Pipeline step for article summary generation."""
+class SummarizeTextStep(
+    pipeline.BaseStep[str, script_generation.VoiceoverScript]
+):
+  """Pipeline step for script generation."""
 
-  _OUTPUT_FILE = "1_summary.txt"
+  _OUTPUT_FILE = "1_script.json"
 
-  def __init__(self, context: pipeline.VideoGenerationContext):
-    super().__init__(context)
-    self.workdir = context.workdir
-    self.gcp_project = context.gcp_project
-    self.gcp_location = context.gcp_location
-    self.language = context.language
-    self.multivoice = context.multivoice
+  def __init__(
+      self, workdir: str, script_generator: script_generation.ScriptGenerator
+  ):
+    super().__init__()
+    self._workdir = workdir
+    self._script_generator = script_generator
 
-  def __call__(self, content: str) -> str:
-    """Article summarization.
+    self._logger = logging.getLogger(self.__class__.__name__)
+
+  def process(self, content: str) -> script_generation.VoiceoverScript:
+    """Script generation step.
 
     Args:
         content: A string. Text of the article to be summarized.
 
     Returns:
-        A string with the article summary
+        A VoiveoverScript.
     """
-    output_path = f"{self.workdir}/{self._OUTPUT_FILE}"
-    if self.multivoice:
-      self.logger.info("Returning article content to %s", output_path)
-      summary_text = content
-    else:
-      self.logger.info(
-          "Summarizing article text with Gemini to %s", output_path
-      )
-      generation_config = {
-          "max_output_tokens": 8192,
-          "temperature": 0.2,
-          "top_p": 0.8,
-          "top_k": 40,
-      }
-      model = generative_models.GenerativeModel("gemini-1.5-pro-001")
-      prompt = textwrap.dedent(f"""\
-        Summarize the content of the following article according to these rules:
-        1. The summary must have between 300 and 600 words.
-        2. The summary must not mention the author's name.
-        3. The summary must start with a phrase that captures the attention of
-           the audience  and is related to the content of the article.
-        4. The summary must end with a conclusion.
-        5. In the case that the article has numbers of statistics, they should
-           be mentioned in the summary.
-        6. The summary must have more than two phrases.
-        7. The summary must have less than six phrases.
-        8. The language for the article and for response is {self.language}
-
-        The article to be summarized is as follows:
-        {content}
-      """)
-      response = model.generate_content(
-          prompt,
-          generation_config=generation_config,
-      )
-      summary_text = response.text
-      summary_text = summary_text.replace("*", "")
-    with open(output_path, "w", encoding="utf-8") as f:
-      f.write(summary_text)
-    return summary_text
+    output_path = f"{self._workdir}/{self._OUTPUT_FILE}"
+    self._logger.info("Creating voiceover script from article text.")
+    script = self._script_generator.generate(content, output_path)
+    self._logger.info("Script saved to %s,", output_path)
+    return script

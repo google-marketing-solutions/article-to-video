@@ -48,8 +48,9 @@ class VideoGenerationContextTest(unittest.TestCase):
   def test_loading_request_params(self):
     request_params = {
         'ken_burns': True,
-        'burned_in_subtitles': False,
         'language_of_article': 'Portuguese (Brazil)',
+        'burned_in_subtitles': True,
+        'language': 'pt-BR',
         'sentiment': True,
         'video_overlay': True,
         'title': True,

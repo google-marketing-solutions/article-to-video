@@ -1,4 +1,4 @@
-google_cloud_aiplatform
+google_cloud_aiplatform[full]
 google-cloud-speech
 google-cloud-storage
 google-cloud-texttospeech
@@ -16,3 +16,14 @@ gunicorn
 opencv-python
 parameterized
 msgspec
+ray==2.33.0
+tensorflow-io-gcs-filesystem==0.37.1
+aiohttp==3.11.12
+aiohttp-cors
+colorful
+py-spy
+opencensus
+prometheus-client
+smart-open
+virtualenv
+memray

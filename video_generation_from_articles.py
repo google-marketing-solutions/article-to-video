@@ -6,11 +6,14 @@ import time
 import uuid
 import flask
 import pipeline
+import vertexai
 from video import video_generation_errors
 import video_generator_execution
 import yaml
 
 config = yaml.safe_load(open('config.yml'))
+
+vertexai.init(project=config['gcp_project'], location=config['gcp_location'])
 
 logging.basicConfig(level=logging.INFO)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}

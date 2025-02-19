@@ -70,11 +70,14 @@ class ScriptGenerator:
       self,
       speakers: Literal[1, 2],
       language: Literal["en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "pt-BR"],
-      llm: genai.GenerativeModel = genai.GenerativeModel("gemini-1.5-pro-001"),
+      llm: genai.GenerativeModel,
   ):
     self.speakers = speakers
     self.language = language
-    self._llm = llm
+    if llm:
+      self._llm = llm
+    else:
+      self._llm = genai.GenerativeModel("gemini-1.5-pro-001")
 
   def _create_response_schema(self) -> dict[str, any]:
     return {

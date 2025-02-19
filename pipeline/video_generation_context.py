@@ -48,3 +48,5 @@ class VideoGenerationContext:
     self.article_content = request_params.get('article_content', False)
     self.image_paths = request_params.get('image_paths', [])
     self.multivoice = request_params.get('multivoice', False)
+    self.multitext = request_params.get('multitext', False)
+    self.splash_image = request_params.get('splash_image', None)

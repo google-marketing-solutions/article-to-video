@@ -53,11 +53,11 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
         scenes=[
             storyboarding.Scene(
                 image_path='input_images/image1.jpg',
-                start_time=0,
+                start_time='00:00:00,000',
             ),
             storyboarding.Scene(
                 image_path='input_images/image2.jpg',
-                start_time=24.5,
+                start_time='00:00:24,500',
             ),
         ],
         main_audio_path='/my/audio',
@@ -97,11 +97,11 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
         scenes=[
             storyboarding.Scene(
                 image_path='input_images/image1.jpg',
-                start_time=0,
+                start_time='00:00:00,000',
             ),
             storyboarding.Scene(
                 image_path='input_images/image2.jpg',
-                start_time=20.0,
+                start_time='00:00:20,000',
             ),
         ],
         main_audio_path='/my/audio',
@@ -117,7 +117,6 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
 
   @parameterized.parameterized.expand([
       ('zoom_in_slow', 'in', False),
-      ('zoom_in_fast', 'in', True),
       ('zoom_out_slow', 'out', False),
       ('zoom_out_fast', 'out', True),
   ])
@@ -157,7 +156,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
         scenes=[
             storyboarding.Scene(
                 image_path='input_images/image1.jpg',
-                start_time=0,
+                start_time='00:00:00,000',
                 animation=animation,
             ),
         ],
@@ -174,7 +173,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
 
   @parameterized.parameterized.expand([
-      ('panto_fast', (32, 32), True),
+      ('panto_slow', (32, 32), True),
       ('panto_slow', (32, 32), False),
   ])
   @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)
@@ -207,7 +206,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
         scenes=[
             storyboarding.Scene(
                 image_path='input_images/image1.jpg',
-                start_time=0,
+                start_time='00:00:00,000',
                 focal_point=[0, 0, 50, 50],
                 animation=animation,
             ),
@@ -260,7 +259,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
         scenes=[
             storyboarding.Scene(
                 image_path='input_images/image1.jpg',
-                start_time=0,
+                start_time='00:00:00,000',
                 animation=animation,
             ),
         ],
@@ -302,7 +301,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
         scenes=[
             storyboarding.Scene(
                 image_path='input_images/image1.jpg',
-                start_time=0,
+                start_time='00:00:00,000',
             ),
         ],
         main_audio_path='/my/audio',

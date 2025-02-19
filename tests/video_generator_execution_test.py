@@ -148,6 +148,7 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
       ("video_id", "test_video_id"),
       ("language", "en-US"),
       ("multivoice", False),
+      ("multitext", False),
       ("sentiment", False),
       ("video_overlay", False),
       ("title", False),

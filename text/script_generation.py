@@ -69,11 +69,13 @@ class ScriptGenerator:
   def __init__(
       self,
       speakers: Literal[1, 2],
+      multitext: Literal[True, False],
       language: Literal["en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "pt-BR"],
-      llm: genai.GenerativeModel,
+      llm: genai.GenerativeModel = None,
   ):
     self.speakers = speakers
     self.language = language
+    self.multitext = multitext
     if llm:
       self._llm = llm
     else:
@@ -136,19 +138,41 @@ class ScriptGenerator:
     Returns:
       The generated script.
     """
+
+    multitext_edit1 = "this article"
+    multitext_extra_instructions = ""
+
+    if self.multitext:
+      multitext_edit1 = "these articles"
+      multitext_extra_instructions = textwrap.dedent("""\
+            - When combining and narrating all the articles follow these rules:
+            1- IMPORTANT: Do not omit any of the articles. Summarize them all
+                and narrate them all.
+            2- Clearly state when you're transitioning from one article to the
+                next.
+            3- Reorder and narrate the articles in the most cohesive way,
+                ensuring similar topics are discussed one after the other.
+            4- Start the narration explaining you are summarizing several
+                articles.
+            5- Wrap up the narration with a salutation.
+        """)
+
     prompt = textwrap.dedent(f"""\
-      Take this article and give me a script of news anchors narrating the main
-      points in the article in the form of a news flash. The speaker(s) should
-      briefly introduce the topic before diving in; however, they shouldn't
-      introduce themselves, or say things like welcome back, or now to story, or
-      we are taking you to... as the output of this will be consumed
-      independently in a news page. If there are multiple speakers, one person
-      should be the main anchor who gives the main points, while the other
-      anchor makes complementary points. It should not be a dialog, rather, the
-      speaker(s) should both should aim to convey the same news content. If
-      there are multiple speakers they should take turns when talking and the
-      switch over should be very natural while sounding professional. Add some
-      enthusiasm but maintain professionalism.
+      Take {multitext_edit1} and give me a script of news anchors narrating the
+      main points in {multitext_edit1} in the form of a news flash.
+      The speaker(s) should briefly introduce the topic(s) in less than 15
+      seconds before diving in; however, they shouldn't introduce themselves,
+      or say things like welcome back, or now to story, or we are taking
+      you to... as the output of this will be consumed independently in a
+      news page. Also don't make mention to a time of day (like 'good evening'
+      or 'good morning' If there are multiple speakers,
+      one person should be the main anchor who gives the
+      main points, while the other anchor makes complementary points.
+      It should not be a dialog, rather, the speaker(s) should both should
+      aim to convey the same news content. If there are multiple speakers
+      they should take turns when talking and the switch over should be
+      very natural while sounding professional. Add some enthusiasm
+      but maintain professionalism.
 
       Output:
       - Identify the speaker(s). For each speaker, describe their persona, and
@@ -162,6 +186,7 @@ class ScriptGenerator:
 
       Additional instructions:
       - Don't add quotes or slashes within the output.
+      {multitext_extra_instructions}
 
       This is the article:
       {source_text}

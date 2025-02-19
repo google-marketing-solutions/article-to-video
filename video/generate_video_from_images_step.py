@@ -49,7 +49,7 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
         .resize(width=self._target_resolution[0])
         .set_position("center")
         .set_fps(self._fps)
-        .set_start(scene.start_time - 1)
+        .set_start(max(scene.start_time_seconds - 1, 0))
     )
     animation_details = scene.animation.split("_")
     match animation_details[0]:
@@ -108,20 +108,19 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
 
     clips = []
     # Add the scenes
-    for i, scene in enumerate(
-        sorted(storyboard.scenes, key=lambda s: s.start_time)
-    ):
+    ordered_scenes = sorted(storyboard.scenes, key=lambda s: s.start_time)
+    for i, scene in enumerate(ordered_scenes):
       self._logger.info("\t-%s", scene.image_path)
       next_scene_start_time = (
           100_000_000
-          if i < len(storyboard.scenes)
-          else storyboard.scenes[i + 1].start_time
+          if i+1 >= len(storyboard.scenes)
+          else storyboard.scenes[i + 1].start_time_seconds
       )
       clip_end_time = min(next_scene_start_time, audio_file_length)
-      if scene.start_time < clip_end_time:
+      if scene.start_time_seconds < clip_end_time:
         clips.append(
             self.create_scene(
-                scene, duration=clip_end_time - scene.start_time + 1
+                scene, duration=clip_end_time - scene.start_time_seconds + 1
             )
         )
       else:

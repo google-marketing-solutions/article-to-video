@@ -9,13 +9,13 @@ from vertexai import generative_models
 _SCENES = [
     storyboarding.Scene(
         image_path="image/path/1",
-        start_time=0,
+        start_time="00:00:00,000",
         focal_point=[0, 0, 1000, 500],
         main_subject=[0, 0, 1000, 1000],
     ),
     storyboarding.Scene(
         image_path="image/path/2",
-        start_time=23.0,
+        start_time="00:00:23,000",
         focal_point=[250, 0, 1000, 500],
         main_subject=[0, 250, 1000, 1000],
     ),

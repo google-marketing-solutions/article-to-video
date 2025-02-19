@@ -1,11 +1,12 @@
 """Model classes for Storyboarding."""
 
 import dataclasses
+import datetime
+import time
 from typing import Literal, Optional, Tuple
 
 ImageAnimation = Literal[
     "zoom_in_slow",
-    "zoom_in_fast",
     "zoom_out_slow",
     "zoom_out_fast",
     "slide_left",
@@ -13,7 +14,6 @@ ImageAnimation = Literal[
     "slide_up",
     "slide_down",
     "panto_slow",
-    "panto_fast",
     "static",
 ]
 
@@ -33,9 +33,11 @@ class Scene:
       representing the main focal point for the image. The center of the
       bounding box should be considered the focal point. Default focal point is
       the center of the image.
+    justification: a rationale provided by the LLM as to why a scene was
+      constructed as such. Useful for debugging.
   """
 
-  start_time: float
+  start_time: str
   image_path: str
   animation: ImageAnimation = "static"
   main_subject: list[float] = dataclasses.field(
@@ -44,6 +46,20 @@ class Scene:
   focal_point: list[float] = dataclasses.field(
       default_factory=lambda: [0.0, 0.0, 1000.0, 1000.0]
   )
+  justification: Optional[str] = None
+
+  @property
+  def start_time_seconds(self) -> float:
+    """Returns the timestamp in seconds."""
+
+    if not self.start_time:
+      return 0
+    else:
+      x = time.strptime(self.start_time.split(",")[0], "%H:%M:%S")
+      start_time_seconds = datetime.timedelta(hours=x.tm_hour,
+                                              minutes=x.tm_min,
+                                              seconds=x.tm_sec).total_seconds()
+      return start_time_seconds
 
 
 @dataclasses.dataclass
@@ -57,56 +73,14 @@ class TextOverlay:
   transition_in: Optional[str] = None
   transition_out: Optional[str] = None
   font_style: str = "Verdana-Bold"
-  font_size: int = 48
+  font_size: int = 40
   background_color: str = "rgba(0, 0, 0, 0.5)"
+  font_color: str = "white"
   alignment: str = "West"
   position: Tuple[str, str] = ("center", "center")
   method: str = "label"
   text_w: Optional[int] = None
   text_h: Optional[int] = None
-  _font_color: Optional[str] = None
-
-  @property
-  def font_color(self) -> str:
-    if self._font_color is None:
-      self._font_color = self.calculate_text_color(self.background_color)
-    return self._font_color
-
-  @font_color.setter
-  def font_color(self, value: str):
-    self._font_color = value
-
-  def calculate_text_color(self, background_hex_color: str) -> str:
-    """Determine black or white for text font against a given background color.
-
-    This function calculates the luminance of a color specified in hexadecimal
-    format
-    and returns "black" if the luminance is greater than 0.5 (indicating a
-    lighter background),
-    and "white" otherwise (for darker backgrounds).
-
-    Args:
-        background_hex_color: The background color in hexadecimal format (e.g.,
-          "#RRGGBB").
-
-    Returns:
-        The optimal text color, either "black" or "white".
-
-    Raises:
-        ValueError: If the input `background_hex_color` is not a valid
-        hexadecimal color string.
-    """
-    if background_hex_color is None:
-      return "white"
-    try:
-      # Gets two letters at a time e.g. "RR" and then the next two, etc. and
-      # converts them into integers from base-16
-      r, g, b = (int(background_hex_color[i : i + 2], 16) for i in (1, 3, 5))
-      luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-      return "black" if luminance > 0.5 else "white"
-    except ValueError:
-      print("Warning: Invalid hex color format; using white text color.")
-      return "white"
 
 
 @dataclasses.dataclass

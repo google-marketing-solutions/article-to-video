@@ -28,6 +28,7 @@ class TextToSpeechStepTest(unittest.TestCase):
             "gcs_bucket_image_path": "my_gcs_bucket_image_path",
             "output_path": "tests/audio/generated",
             "multivoice": True,
+            "multitext": False,
         },
         request_params={},
         video_id="somevideoid",

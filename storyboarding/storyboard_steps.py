@@ -95,6 +95,10 @@ def _describe_images(image_file_paths: list[str]) -> str:
     (if any), activities, setting, lighting, and overall mood conveyed by the
     image. Be specific with object descriptions (e.g., "red leather armchair"
     instead of just "chair").
+    -Identification: if you recognize a person, a location or a brand,
+    explicitly name it in the description (example: "John Smith is in the
+    picture" or "the image is in Paris, France" or "there are logos of Dell,
+    Coca-Cola & Chase")
     - Conciseness: While detailed, descriptions should be concise and avoid
     unnecessary verbosity.
     - No Image URLs: Do not attempt to generate URLs or access external
@@ -112,8 +116,9 @@ def _describe_images(image_file_paths: list[str]) -> str:
 
     2. Group of People:
     - Main Subject: The group as a whole.
-    - Focal Point:  A cluster encompassing as many faces as possible. If one
-    person is clearly central or interacting, prioritize their face.
+    - Focal Point:  A cluster encompassing all faces or as many faces as
+      possible. If it is extremely clear one person is the focus of the image,
+      prioritize their face.
 
     3. Landscape/Nature Scene:
     - Main Subject: The overall scene (e.g., a mountain range, forest,
@@ -268,13 +273,15 @@ def create_text_overlays(
   Select quotes from the article that either provide essential context or evoke
     strong emotional resonance, aligning with the article's original tone. Do
     not make up fake quotes, only use quotation marks for the text if it is a
-    quote in the article itself.
+    quote in the article itself. Ensure the text selected is a properly-worded
+    sentence with an important point and a relevant message; do not suggest
+    an incomplete thought.
   Make sure to capitalize the first letter of the text, and use proper
     punctuation.
   Use the SRT file to ensure that the timing of the text overlays aligns with
     the video’s narration. Never exceed the length of the SRT file.
   Prioritize direct quotes from the article.
-  Minimum 3 words, maximum 35 words per overlay.
+  Minimum 3 words, maximum 30 words per overlay.
   No overlays in the first 4 seconds of the video.
   One overlay every 15-20 seconds.
   Minimum display time per overlay: 14 seconds.
@@ -355,18 +362,28 @@ def create_text_overlays(
 
 
 def create_scenes(
-    image_file_paths: list[str], srt_file_path: str
+    image_file_paths: list[str], srt_file_path: str, splash_image: str
 ) -> list[storyboarding.Scene]:
   """Organizes images into logical scenes based on an SRT file.
 
   Args:
     image_file_paths: The images to use as background images in the scenes.
     srt_file_path: The SRT file to organize the images against.
+    splash_image: File name of the splash image (do not include filename
+    extension).
 
   Returns:
     A list of Scenes
   """
-  task_for_prompt = textwrap.dedent("""\
+
+  extra_prompt = ""
+  if splash_image:
+    extra_prompt = textwrap.dedent(f"""\
+      8. If there is an image named "{splash_image}" and there's no other image
+      that fits well or better at the beginning, start the slideshow with
+      that splash image.""")
+
+  task_for_prompt = textwrap.dedent(f"""\
     You are an expert slideshow creator with a keen eye for visual storytelling.
     Your task is to analyze a provided SRT file (containing timestamps and
     transcribed narration) and a list of image files. Based on the SRT file's
@@ -383,7 +400,6 @@ def create_scenes(
 
     Supported Animations:
     - zoom_in_slow (slow, linear zoom to image center)
-    - zoom_in_fast (fast, eased zoom to image center)
     - zoom_out_slow (slow, linear zoom out from image center)
     - zoom_out_fast (fast, eased zoom out from image center)
     - slide_left (image slides smoothly from right to left)
@@ -391,13 +407,13 @@ def create_scenes(
     - slide_up (image slides smoothly from bottom to top)
     - slide_down (image slides smoothly from top to bottom)
     - panto_slow (linear zoom pan to image focal point)
-    - panto_fast (fast, eased zoom pan to image focal point)
     - static (static image)
 
     Output:
     A structured list specifying the following for each image in the slideshow:
     - File Path: The complete path to the image file.
-    - Start Time (Timestamp): The precise time (in seconds) when the image
+    - Start Time (Timestamp): The precise time
+    (in hours:minutes:seconds,milliseconds) when the image
     should appear, aligning logically with the narration.
     - Bounding Boxes: Two bounding boxes associated with the image (if provided)
     - Main Subject Bounding Box and Focal Point Bounding Box.
@@ -419,17 +435,20 @@ def create_scenes(
     start after the last entry in the SRT file.
     4. Maximize Spacing: Ensure image start times are spaced as far apart as
     possible within the overall SRT duration. Avoid clustering images at the
-    beginning. The minimum time between images should be about 5 seconds,
-    preferably ~10 seconds.
+    beginning. The minimum time between images should be about 4 seconds.
     5. Relevance: Only include relevant images. Omit irrelevant ones.
     6. Animation Selection: Choose an animation for each image that enhances the
-    visual storytelling and fits the image content and narration. Prefer zoom in
+    visual storytelling and fits the image content and narration. Prefer slide
+    animations for images with large focal points, with many focal points or
+    when people are the main subject. Use panto, when there is a specific focal
+    point that you want to draw the viewer's attention to. Use zoom in
     or zoom out when there is no main subject, or the main subject takes up most
-    of the image. Prefer slide animations for images with large focal points, or
-    many focal points. And use panto, when there is a specific focal point that
-    you want to draw the viewer's attention to. Be sure to use a mix of
-    animations, speeds, and directions. Justify your animation choice in the
-    output.
+    of the image and when the focus is not on a person or people.
+    Be sure to use a mix of animations, speeds, and directions.
+    Justify your animation choice in the output.
+    7. If there are people in foreground of the image, ensure the
+    Bounding Box and Focal Point includes all the faces in the foreground.
+    {extra_prompt}
 
     Example
 
@@ -491,8 +510,9 @@ def create_scenes(
       "items": {
           "type": "object",
           "properties": {
-              "start_time": {"type": "number"},
+              "start_time": {"type": "string"},
               "image_path": {"type": "string"},
+              "justification": {"type": "string"},
               "animation": {
                   "type": "string",
                   "enum": list(typing.get_args(storyboarding.ImageAnimation)),
@@ -532,15 +552,18 @@ def create_storyboard_step(
     srt_path: str,
     article_content: str,
     generate_text_overlays: bool,
+    splash_image: str,
 ) -> storyboarding.Storyboard:
   """Assembles a Storyboard for video generation.
 
   Args:
-    image_paths: The file paths to the images to be used in the slideshow
-    main_audio_path: The file path for the main audio (narration)
-    srt_path: The file path for the SRT file
+    image_paths: The file paths to the images to be used in the slideshow.
+    main_audio_path: The file path for the main audio (narration).
+    srt_path: The file path for the SRT file.
     article_content: Text of the article.
     generate_text_overlays: Disable text overlay generation.
+    splash_image: File name of the splash image (do not include filename
+    extension).
 
   Returns:
     A Storyboard.
@@ -548,6 +571,7 @@ def create_storyboard_step(
   scenes = create_scenes(
       image_file_paths=image_paths,
       srt_file_path=srt_path,
+      splash_image=splash_image,
   )
   srt_parts, srt_end_time = _parse_srt_file(srt_path)
 

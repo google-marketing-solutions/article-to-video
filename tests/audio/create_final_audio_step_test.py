@@ -20,7 +20,7 @@ class CreateFinalAudioStepTest(unittest.TestCase):
     self.storyboard = storyboarding.Storyboard(
         scenes=[
             storyboarding.ImageScene(
-                image_path='input_images/image1.jpg', start_time=0
+                image_path='input_images/image1.jpg', start_time='0'
             )
         ],
         main_audio_path='/my/narration_audio',

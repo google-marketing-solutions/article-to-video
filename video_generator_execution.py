@@ -62,6 +62,7 @@ def generate_audio_step(context: pipeline.VideoGenerationContext):
   script_generator = text.ScriptGenerator(
       speakers=2 if context.multivoice else 1,
       language=context.language,
+      multitext=context.multitext
   )
   pipeline.Pipeline(
       steps=[
@@ -87,6 +88,7 @@ def generate_storyboard_step(context: pipeline.VideoGenerationContext):
       main_audio_path=f"{context.workdir}/{AUDIO_FILE_NAME}",
       srt_path=f"{context.workdir}/{SRT_FILE_NAME}",
       generate_text_overlays=not context.disable_text_overlays,
+      splash_image=context.splash_image,
   )
   with open(
       f"{context.workdir}/{STORYBOARD_FILE_NAME}", "w", encoding="utf-8"
@@ -166,6 +168,12 @@ def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:
       help="Path to the directory containing images.",
   )
   parser.add_argument(
+      "--splash_image",
+      type=str,
+      required=False,
+      help="File name of the splash image (do not include filename extension)",
+  )
+  parser.add_argument(
       "--disable_text_overlays",
       action="store_true",
       default=False,
@@ -182,6 +190,12 @@ def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:
       action="store_true",
       default=False,
       help=argparse.SUPPRESS,
+  )
+  parser.add_argument(
+      "--multi_text",
+      action="store_true",
+      default=False,
+      help="When provided, the video will summarize multiple articles.",
   )
   parser.add_argument(
       "--language",
@@ -238,10 +252,12 @@ def main(args=sys.argv[1:]):
       request_params={
           "article_content": parsed_args.article_path.read(),
           "image_paths": _get_image_paths(parsed_args.image_dir),
+          "splash_image": parsed_args.splash_image,
           "multivoice": parsed_args.multi_voice,
           "disable_text_overlays": parsed_args.disable_text_overlays,
           "burn_in_subtitles": parsed_args.burn_in_subtitles,
           "language": parsed_args.language,
+          "multitext": parsed_args.multi_text,
       },
       video_id=parsed_args.video_id or str(uuid.uuid4()),
   )

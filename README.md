@@ -28,7 +28,7 @@ This solution is still under development and should be considered experimental.
 
 ```bash
 usage: video_generator_execution.py [-h] [--config CONFIG] [--video_id VIDEO_ID] --article_path ARTICLE_PATH --image_dir IMAGE_DIR [--disable_text_overlays]
-                                    [--burn_in_subtitles] [--language {en-US,en-GB,fr-FR,de-DE,es-ES,pt-BR}] [--step {audio,storyboard,video}] [--debug]
+                                    [--multi_text] [--splash_image SPLASH_IMAGE] [--burn_in_subtitles] [--language {en-US,en-GB,fr-FR,de-DE,es-ES,pt-BR}] [--step {audio,storyboard,video}] [--debug]
 
 options:
   -h, --help            show this help message and exit
@@ -39,6 +39,14 @@ options:
                         Path to the article text file.
   --image_dir IMAGE_DIR, -i IMAGE_DIR
                         Path to the directory containing images.
+  --multi_text MULTI_TEXT
+                        Specify that the LLM is to summarize multiple articles, not just 1.
+                        Changes prompt accordingly.
+  --splash_image SPLASH_IMAGE
+                        Specifies the file name of the splash image (do not
+                        include filename extension)
+                        indicating the image to optionally use at the beginning
+                        of the video
   --disable_text_overlays
                         Disables text overlay generation.
   --burn_in_subtitles   When provided, subtitles will be burned into the content.
@@ -109,7 +117,7 @@ pip-compile requirements.in --generate-hashes --upgrade
 ```
 
 # Disclaimer:
-Copyright 2024 Google LLC. This solution, including any related sample code or
+Copyright 2025 Google LLC. This solution, including any related sample code or
 data, is made available on an “as is,” “as available,” and “with all faults”
 basis, solely for illustrative purposes, and without warranty or representation
 of any kind. This solution is experimental, unsupported and provided solely for

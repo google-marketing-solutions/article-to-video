@@ -239,7 +239,7 @@ def create_text_overlay_video_clip(
   # Create the text clip with specific styles
   text_clip = (
       TextClip(
-          wrap_text_by_words(text_overlay.text, 6),
+          wrap_text_by_words(text_overlay.text, 5),
           fontsize=text_overlay.font_size or 30,
           font=text_overlay.font_style,
           color=text_overlay.font_color,

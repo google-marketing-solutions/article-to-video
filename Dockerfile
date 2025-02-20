@@ -1,4 +1,4 @@
-FROM python:3.13.1-slim
+FROM node:23.8.0-bookworm-slim
 
 ENV PYTHONUNBUFFERED 1
 ENV MSGPACK_PUREPYTHON 1
@@ -8,30 +8,20 @@ WORKDIR /usr/src/app
 RUN mkdir output
 
 RUN apt-get update && apt-get install -y apt-utils
-RUN python3 -m ensurepip --upgrade
 
-
-
-# Dependencies for scipy
-RUN apt-get update && apt-get install -y build-essential gcc g++ gfortran libopenblas-dev liblapack-dev pkg-config curl
-
-# NodeJS
-RUN apt-get update && apt-get install -y nodejs npm
-RUN npm install -g n
-RUN n stable
-
+# Dependencies
+RUN apt-get update && apt-get install -y build-essential gcc g++ gfortran libopenblas-dev liblapack-dev pkg-config curl python3 python3-pip
 RUN apt-get update && apt-get install -y imagemagick ffmpeg
 
 COPY requirements.txt ./
-RUN pip install --require-hashes -r requirements.txt
+RUN pip install --break-system-packages --require-hashes -r requirements.txt
 
 COPY . ./
 
 # Build the UI files
 WORKDIR /usr/src/app/ui
-RUN npm install -g @angular/cli
 RUN npm install
-RUN ng build
+RUN node_modules/@angular/cli/bin/ng.js build
 
 WORKDIR /usr/src/app
 

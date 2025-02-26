@@ -1,10 +1,9 @@
 """Pipeline for generating videos."""
 
-from typing import Self
-
 from pipeline import base
 from pipeline.video_generation_context import VideoGenerationContext
 from pipeline.video_generation_step import VideoGenerationStep
+from typing_extensions import Self
 
 
 class VideoGenerationPipeline(base.Pipeline):

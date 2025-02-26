@@ -1,7 +1,8 @@
 """Generic and base classes for creating pipelines."""
 
 import abc
-from typing import Any, Callable, Generic, ParamSpec, Self, TypeVar
+# pylint: disable-next=g-multiple-import
+from typing_extensions import Any, Callable, Generic, ParamSpec, Self, TypeVar
 
 P = ParamSpec("P", bound=tuple[Any, ...])
 

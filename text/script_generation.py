@@ -69,17 +69,16 @@ class ScriptGenerator:
   def __init__(
       self,
       speakers: Literal[1, 2],
-      multitext: Literal[True, False],
-      language: Literal["en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "pt-BR"],
-      llm: genai.GenerativeModel = None,
+      multitext: bool = False,
+      language: Literal[
+          "en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "pt-BR"
+      ] = "en-US",
+      llm: genai.GenerativeModel | None = None,
   ):
     self.speakers = speakers
     self.language = language
     self.multitext = multitext
-    if llm:
-      self._llm = llm
-    else:
-      self._llm = genai.GenerativeModel("gemini-1.5-pro-001")
+    self._llm = llm or genai.GenerativeModel("gemini-1.5-pro-001")
 
   def _create_response_schema(self) -> dict[str, any]:
     return {

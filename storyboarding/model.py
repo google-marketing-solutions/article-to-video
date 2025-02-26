@@ -7,6 +7,7 @@ from typing import Literal, Optional, Tuple
 
 ImageAnimation = Literal[
     "zoom_in_slow",
+    "zoom_in_fast",
     "zoom_out_slow",
     "zoom_out_fast",
     "slide_left",
@@ -14,6 +15,7 @@ ImageAnimation = Literal[
     "slide_up",
     "slide_down",
     "panto_slow",
+    "panto_fast",
     "static",
 ]
 
@@ -56,9 +58,9 @@ class Scene:
       return 0
     else:
       x = time.strptime(self.start_time.split(",")[0], "%H:%M:%S")
-      start_time_seconds = datetime.timedelta(hours=x.tm_hour,
-                                              minutes=x.tm_min,
-                                              seconds=x.tm_sec).total_seconds()
+      start_time_seconds = datetime.timedelta(
+          hours=x.tm_hour, minutes=x.tm_min, seconds=x.tm_sec
+      ).total_seconds()
       return start_time_seconds
 
 

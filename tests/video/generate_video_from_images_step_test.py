@@ -117,6 +117,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
 
   @parameterized.parameterized.expand([
       ('zoom_in_slow', 'in', False),
+      ('zoom_in_fast', 'in', True),
       ('zoom_out_slow', 'out', False),
       ('zoom_out_fast', 'out', True),
   ])
@@ -173,7 +174,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     )
 
   @parameterized.parameterized.expand([
-      ('panto_slow', (32, 32), True),
+      ('panto_fast', (32, 32), True),
       ('panto_slow', (32, 32), False),
   ])
   @mock.patch.object(mpy.CompositeVideoClip, 'write_videofile', autospec=True)

@@ -362,7 +362,9 @@ def create_text_overlays(
 
 
 def create_scenes(
-    image_file_paths: list[str], srt_file_path: str, splash_image: str
+    image_file_paths: list[str],
+    srt_file_path: str,
+    splash_image: str | None = None,
 ) -> list[storyboarding.Scene]:
   """Organizes images into logical scenes based on an SRT file.
 
@@ -370,7 +372,7 @@ def create_scenes(
     image_file_paths: The images to use as background images in the scenes.
     srt_file_path: The SRT file to organize the images against.
     splash_image: File name of the splash image (do not include filename
-    extension).
+      extension).
 
   Returns:
     A list of Scenes
@@ -505,6 +507,11 @@ def create_scenes(
   with open(srt_file_path, "r", encoding="utf-8") as srt_file:
     srt_parts = ["SRT Contents:", srt_file.read()]
 
+  image_animations = list(typing.get_args(storyboarding.ImageAnimation))
+  # TODO(cfeldman): improve and re-enable zoom_in_fast and panto_fast
+  supported_animations = list(
+      set(image_animations) - set(["zoom_in_fast", "panto_fast"])
+  )
   response_schema = {
       "type": "array",
       "items": {
@@ -515,7 +522,7 @@ def create_scenes(
               "justification": {"type": "string"},
               "animation": {
                   "type": "string",
-                  "enum": list(typing.get_args(storyboarding.ImageAnimation)),
+                  "enum": supported_animations,
               },
               "main_subject": {
                   "type": "array",
@@ -552,7 +559,7 @@ def create_storyboard_step(
     srt_path: str,
     article_content: str,
     generate_text_overlays: bool,
-    splash_image: str,
+    splash_image: str | None = None,
 ) -> storyboarding.Storyboard:
   """Assembles a Storyboard for video generation.
 
@@ -563,7 +570,7 @@ def create_storyboard_step(
     article_content: Text of the article.
     generate_text_overlays: Disable text overlay generation.
     splash_image: File name of the splash image (do not include filename
-    extension).
+      extension).
 
   Returns:
     A Storyboard.

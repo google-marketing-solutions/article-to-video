@@ -81,9 +81,19 @@ storyboard using the ```--step video``` option with the CLI.
 ### Local Docker
 
 ```
-sudo docker build -t gtech/video-generation-from-images .
-sudo docker run -e PORT=5000 -p 5000:5000 -t gtech/video-generation-from-images
+[sudo] docker build -t gtech/video-generation-from-images .
+[sudo] docker run -e PORT=5000 -p 5000:5000 -t gtech/video-generation-from-images
 ```
+
+The docker image with build and deploy the UI, but the UI is still experimental
+and will not work correctly at this time. However, the CLI can be accessed with
+the docker by running the following command (you'll also need to configure your
+Google Cloud ADC):
+
+```
+docker exec -it <CONTAINER_ID> /bin/bash
+```
+
 
 ### Local Server
 ```

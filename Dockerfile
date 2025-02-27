@@ -13,8 +13,12 @@ RUN apt-get update && apt-get install -y apt-utils
 RUN apt-get update && apt-get install -y build-essential gcc g++ gfortran libopenblas-dev liblapack-dev pkg-config curl python3 python3-pip
 RUN apt-get update && apt-get install -y imagemagick ffmpeg
 
+# Required for ImageMagick to work with moviepy on Ubuntu
+# https://github.com/Zulko/moviepy/issues/693#issuecomment-355587113
+RUN sed -i.bak '/<policy domain="path" rights="none" pattern="@\*"\/>/d' /etc/ImageMagick-6/policy.xml
+
 COPY requirements.txt ./
-RUN pip install --break-system-packages --require-hashes -r requirements.txt
+RUN pip install --break-system-packages --no-deps --require-hashes -r requirements.txt
 
 COPY . ./
 

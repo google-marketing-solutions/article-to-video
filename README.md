@@ -13,8 +13,7 @@ This solution is still under development and should be considered experimental.
 
 Try Article to Video in Colab!
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]
-(https://colab.research.google.com/github/google-marketing-solutions/article-to-video/blob/main/colab/Article_to_Video.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/google-marketing-solutions/article-to-video/blob/main/colab/Article_to_Video.ipynb)
 
 ## Requirements
 * Google Cloud project with Google Cloud Storage, Vertex AI, and Text-to-Speech

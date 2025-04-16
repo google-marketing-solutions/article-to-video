@@ -78,7 +78,7 @@ class ScriptGenerator:
     self.speakers = speakers
     self.language = language
     self.multitext = multitext
-    self._llm = llm or genai.GenerativeModel("gemini-1.5-pro-001")
+    self._llm = llm or genai.GenerativeModel("gemini-2.0-flash")
 
   def _create_response_schema(self) -> dict[str, any]:
     return {

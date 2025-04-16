@@ -290,7 +290,7 @@ def create_text_overlays(
     or y position.
   Ensure text is legible against the background image.
   """)
-  model = generative_models.GenerativeModel("gemini-1.5-pro-001")
+  model = generative_models.GenerativeModel("gemini-2.0-flash")
   response_schema = {
       "type": "array",
       "items": {

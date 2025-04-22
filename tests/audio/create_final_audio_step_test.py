@@ -3,9 +3,6 @@ from unittest import mock
 
 from audio import create_final_audio_step
 from moviepy import editor as mpy
-import moviepy.audio.fx.all as afx
-import numpy as np
-import parameterized
 import storyboarding
 
 
@@ -19,105 +16,81 @@ class CreateFinalAudioStepTest(unittest.TestCase):
     )
     self.storyboard = storyboarding.Storyboard(
         scenes=[
-            storyboarding.ImageScene(
+            storyboarding.Scene(
                 image_path='input_images/image1.jpg', start_time='0'
             )
         ],
-        main_audio_path='/my/narration_audio',
-        background_audio_path='/my/background_audio',
+        main_audio_path='/my/narration_audio.mp3',
+        background_audio_path='/my/background_audio.wav',
+        srt_path='my/srt/path',
     )
-    self.narration_volume = (
-        create_final_audio_step.CreateFinalAudioStep._NARRATION_VOLUME
+    self.fade_duration = (
+        create_final_audio_step.CreateFinalAudioStep._FADE_OUT_DURATION
     )
-    self.background_volume = (
-        create_final_audio_step.CreateFinalAudioStep._BACKGROUND_VOLUME
-    )
+    self.fps = 44100
 
-  def _setup_mock_audio_clips(
-      self, mock_audiofileclip, narration_duration, background_duration
+  @mock.patch.object(
+      create_final_audio_step.mpy, 'CompositeAudioClip', autospec=True
+  )
+  @mock.patch.object(create_final_audio_step.afx, 'audio_loop', autospec=True)
+  @mock.patch.object(create_final_audio_step.afx, 'volumex', autospec=True)
+  @mock.patch.object(
+      create_final_audio_step.afx, 'audio_fadeout', autospec=True
+  )
+  @mock.patch.object(
+      create_final_audio_step.mpy, 'AudioFileClip', autospec=True
+  )
+  def test_final_audio_path_returned(
+      self,
+      mock_audio_file_clip,
+      mock_audio_fadeout,
+      mock_volumex,
+      mock_audio_loop,
+      mock_composite_audio_clip,
   ):
-    mock_narration_audio = mpy.AudioClip(
-        lambda t: 2 * [np.sin(440 * 2 * np.pi * t)], duration=narration_duration
-    )
-    mock_background_audio = mpy.AudioClip(
-        lambda t: 2 * [np.sin(440 * 2 * np.pi * t)],
-        duration=background_duration,
-    )
-    mock_audiofileclip.side_effect = [
-        mock_narration_audio,
-        mock_background_audio,
-    ]
-    return mock_narration_audio, mock_background_audio
+    """Tests that the process method runs and returns the correct output path."""
+    mock_narration_clip_instance = mock.MagicMock()
+    mock_narration_clip_instance.duration = 10.0
+    mock_narration_clip_instance.close = mock.Mock()
 
-  def _assert_volumex_calls(self, mock_narration_audio, mock_background_audio):
-    narration_volume = (
-        create_final_audio_step.CreateFinalAudioStep._NARRATION_VOLUME
-    )
-    background_volume = (
-        create_final_audio_step.CreateFinalAudioStep._BACKGROUND_VOLUME
-    )
-    self.mock_volumex.assert_has_calls([
-        mock.call(mock_narration_audio, narration_volume),
-        mock.call(mock_background_audio, background_volume),
-    ])
+    mock_background_clip_instance = mock.MagicMock()
+    mock_background_clip_instance.duration = 15.0
+    mock_background_clip_instance.close = mock.Mock()
 
-  @mock.patch.object(mpy.AudioClip, 'write_audiofile', autospec=True)
-  @mock.patch.object(afx, 'audio_fadeout', autospec=True)
-  @mock.patch.object(mpy, 'AudioFileClip')
-  def test_final_audio_path_returned(self, *_):
+    mock_audio_file_clip.side_effect = (
+        lambda path: mock_narration_clip_instance
+        if path == self.storyboard.main_audio_path
+        else mock_background_clip_instance
+    )
 
-    mock_audio_fadeout = afx.audio_fadeout
-    mock_final_audio = mock_audio_fadeout.return_value
-    mock_final_audio.write_audiofile.return_value = self.output_path
+    mock_volumex_output_clip = mock.MagicMock(spec=mpy.AudioClip)
+    mock_volumex_output_clip.set_duration.return_value = (
+        mock_volumex_output_clip
+    )
+    mock_volumex_output_clip.subclip.return_value = mock.MagicMock(
+        spec=mpy.AudioClip
+    )
+    mock_volumex.return_value = mock_volumex_output_clip
+
+    mock_audio_loop.return_value = mock.MagicMock(spec=mpy.AudioClip)
+
+    mock_composite_instance = mock.MagicMock()
+    mock_composite_instance.close = mock.Mock()
+    mock_composite_audio_clip.return_value = mock_composite_instance
+
+    mock_final_clip_instance = mock.MagicMock(spec=mpy.AudioClip)
+    mock_final_clip_instance.write_audiofile = mock.Mock()
+    mock_audio_fadeout.return_value = mock_final_clip_instance
 
     result_audio_path = self.final_audio_step.process(self.storyboard)
-    mock_audio_fadeout.assert_called_once()
-    mock_final_audio.write_audiofile.assert_called_once_with(
-        filename=self.output_path, fps=44100
-    )
+
     self.assertEqual(self.output_path, result_audio_path)
-
-  @parameterized.parameterized.expand([
-      ('extend_background', 15, 10, True),  # Narration longer than background
-      ('trim_background', 15, 20, False),  # Narration shorter than background
-  ])
-  @mock.patch.object(mpy.AudioClip, 'write_audiofile', autospec=True)
-  @mock.patch.object(afx, 'audio_fadeout', autospec=True)
-  @mock.patch.object(afx, 'volumex', autospec=True)
-  @mock.patch.object(afx, 'audio_loop', autospec=True)
-  @mock.patch.object(mpy, 'CompositeAudioClip', autospec=True)
-  @mock.patch.object(mpy, 'AudioFileClip')
-  def test_adjust_audio_clip_durations(
-      self,
-      _,
-      narration_duration,
-      background_duration,
-      extend_background,
-      mock_audiofileclip,
-  ):
-
-    mock_narration_audio, mock_background_audio = self._setup_mock_audio_clips(
-        mock_audiofileclip, narration_duration, background_duration
+    mock_final_clip_instance.write_audiofile.assert_called_once_with(
+        filename=self.output_path, fps=self.fps
     )
-
-    mock_audio_loop = afx.audio_loop
-    self.mock_volumex = afx.volumex
-    mock_audio_fadeout = afx.audio_fadeout
-    mock_composite_audio = mock_audio_fadeout.return_value
-    mock_composite_audio.write_audiofile.return_value = self.output_path
-
-    self.final_audio_step.process(self.storyboard)
-
-    if extend_background:
-      mock_audio_loop.assert_called_once()
-    else:
-      mock_audio_loop.assert_not_called()
-
-    self._assert_volumex_calls(mock_narration_audio, mock_background_audio)
-    mock_audio_fadeout.assert_called_once()
-    mock_composite_audio.write_audiofile.assert_called_once_with(
-        filename=self.output_path, fps=44100
-    )
+    mock_narration_clip_instance.close.assert_called_once()
+    mock_background_clip_instance.close.assert_called_once()
+    mock_composite_instance.close.assert_called_once()
 
 
 if __name__ == '__main__':

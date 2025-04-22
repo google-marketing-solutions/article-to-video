@@ -1,7 +1,6 @@
 import unittest
 from pipeline.video_generation_pipeline import VideoGenerationPipeline
 from pipeline.video_generation_step import VideoGenerationStep
-from truth.truth import AssertThat
 
 
 class VideoGenerationPipelineTest(unittest.TestCase):
@@ -31,4 +30,4 @@ class VideoGenerationPipelineTest(unittest.TestCase):
         )
         .process(1)
     )
-    AssertThat(result).IsEqualTo(6)
+    self.assertEqual(result, 6)

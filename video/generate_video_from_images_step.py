@@ -113,7 +113,7 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
       self._logger.info("\t-%s", scene.image_path)
       next_scene_start_time = (
           100_000_000
-          if i+1 >= len(storyboard.scenes)
+          if i + 1 >= len(storyboard.scenes)
           else storyboard.scenes[i + 1].start_time_seconds
       )
       clip_end_time = min(next_scene_start_time, audio_file_length)
@@ -138,7 +138,7 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
       clips.append(
           mpy.ImageClip(storyboard.logo_path, duration=audio_clip.duration)
           .resize(width=50)
-          .set_pos(("right", "top"))
+          .set_position(("right", "top"))
           .margin(right=_LOGO_MARGIN, top=_LOGO_MARGIN, opacity=0)
       )
 

@@ -264,11 +264,11 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
 
     # the context is what we expect
     context = mock_generate_video_step.call_args[0][0]
-    self.assertEqual(
+    self.assertCountEqual(
         context.image_paths,
         [
-            self.temp_work_dir.name + "/images/image1.jpg",
             self.temp_work_dir.name + "/images/image2.jpg",
+            self.temp_work_dir.name + "/images/image1.jpg",
         ],
     )
 

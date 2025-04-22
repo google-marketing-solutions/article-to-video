@@ -7,7 +7,6 @@ import moviepy.audio.fx.all as afx
 import numpy as np
 import parameterized
 import storyboarding
-from truth import truth
 from video import effects
 from video import generate_video_from_images_step
 from video import video_generation_errors
@@ -19,9 +18,7 @@ class GenerateVideoFromImagesStepTest(unittest.TestCase):
     step = generate_video_from_images_step.GenerateVideoFromImagesStep(
         'output/audio/path.mp3', 'output/video/path.mp4'
     )
-    with truth.AssertThat(
-        video_generation_errors.NoImagesFoundError
-    ).IsRaised():
+    with self.assertRaises(video_generation_errors.NoImagesFoundError):
       step(storyboarding.Storyboard([], 'audio/path', 'srt/path'))
 
   @mock.patch.object(

@@ -119,7 +119,7 @@ gcloud builds submit . --substitutions _IMAGE_NAME=atv,_SERVICE_NAME=atv,REPO_NA
 From the base folder, run
 
 ```
-python3 -m unittest
+python3 -m unittest discover -p "*_test.py"
 ```
 
 ## Upgrading Dependencies

@@ -29,7 +29,6 @@ import sys
 import uuid
 from audio import subtitles_generation_step
 from audio import text_to_speech_step
-import msgspec
 import pipeline
 import storyboarding
 import text
@@ -50,81 +49,101 @@ OUTPUT_VIDEO_FILE_NAME = "5_withaudiovideo.mp4"
 OUTPUT_AUDIO_FILE_NAME = "6_finalaudio.mp3"
 
 
-def generate_audio_step(context: pipeline.VideoGenerationContext):
-  """Generates audio and subtitles based on the article content.
+class VideoGenerator:
+  """Orchestrates the video generation process by managing various steps.
 
-  This function orchestrates the pipeline steps for generating audio from
-  the article summary and creating corresponding subtitles.
-
-  Args:
-    context: A VideoGenerationContext object.
+  This class encapsulates the logic for generating audio, creating a storyboard,
+  and producing the final video output. It utilizes a `ScriptGenerator` for
+  text processing and interacts with various pipeline steps for each stage of
+  the video creation.
   """
-  script_generator = text.ScriptGenerator(
-      speakers=2 if context.multivoice else 1,
-      language=context.language,
-      multitext=context.multitext
-  )
-  pipeline.Pipeline(
-      steps=[
-          create_workdir_step.CreateWorkdirStep(context),
-          summarize_text_step.SummarizeTextStep(
-              context.workdir, script_generator
-          ),
-          text_to_speech_step.TextToSpeechStep(context),
-          subtitles_generation_step.SubtitlesGenerationStep(context),
-      ]
-  ).process(context.article_content)
 
+  def __init__(
+      self,
+      script_generator: text.ScriptGenerator = text.ScriptGenerator(speakers=2),
+  ):
+    """Initializes the VideoGenerator.
 
-def generate_storyboard_step(context: pipeline.VideoGenerationContext):
-  """Generates a storyboard based on the article, images, audio, and subtitles.
+    Args:
+      script_generator: An instance of `text.ScriptGenerator` used for
+        generating scripts from article content. Defaults to a ScriptGenerator
+        configured for 2 speakers.
+    """
+    self.script_generator = script_generator
 
-  Args:
-    context: A VideoGenerationContext object.
-  """
-  storyboard = storyboarding.create_storyboard_step(
-      article_content=context.article_content,
-      image_paths=context.image_paths,
-      main_audio_path=f"{context.workdir}/{AUDIO_FILE_NAME}",
-      srt_path=f"{context.workdir}/{SRT_FILE_NAME}",
-      generate_text_overlays=not context.disable_text_overlays,
-      splash_image=context.splash_image,
-  )
-  with open(
-      f"{context.workdir}/{STORYBOARD_FILE_NAME}", "w", encoding="utf-8"
-  ) as f:
-    f.write(msgspec.json.encode(storyboard).decode("utf-8"))
+  def generate_audio_step(self, context: pipeline.VideoGenerationContext):
+    """Generates audio and subtitles from the provided article content.
 
+    Args:
+      context: The `VideoGenerationContext` containing configuration and data
+        for the audio generation process.
+    """
+    self.script_generator.language = context.language
+    self.script_generator.speakers = 2 if context.multivoice else 1
+    self.script_generator.multitext = context.multitext
+    pipeline.Pipeline(
+        steps=[
+            create_workdir_step.CreateWorkdirStep(context),
+            summarize_text_step.SummarizeTextStep(
+                context.workdir, self.script_generator
+            ),
+            text_to_speech_step.TextToSpeechStep(context),
+            subtitles_generation_step.SubtitlesGenerationStep(context),
+        ]
+    ).process(context.article_content)
 
-def generate_video_step(context: pipeline.VideoGenerationContext):
-  """Generates a video based on the storyboard.
+  def generate_storyboard_step(
+      self, context: pipeline.VideoGenerationContext
+  ) -> storyboarding.Storyboard:
+    """Creates a storyboard from images, audio, and subtitle information.
 
-  Args:
-    context: A VideoGenerationContext object.
-  """
-  storyboard_file_path = f"{context.workdir}/{STORYBOARD_FILE_NAME}"
-  try:
-    with open(storyboard_file_path, "r", encoding="utf-8") as storyboard_file:
-      storyboard = msgspec.json.decode(
-          storyboard_file.read(), type=storyboarding.Storyboard
-      )
-      video.GenerateVideoFromImagesStep(
-          output_audio_path=f"{context.workdir}/{OUTPUT_AUDIO_FILE_NAME}",
-          output_video_path=f"{context.workdir}/{OUTPUT_VIDEO_FILE_NAME}",
-          burn_in_subtitles=context.burn_in_subtitles,
-      ).process(storyboard)
-  except FileNotFoundError:
-    logging.exception("Storyboard file not found: %s", storyboard_file_path)
-  except msgspec.ValidationError as e:
-    logging.exception(
-        "Invalid storyboard JSON: %s \n Error: %s \n", storyboard_file_path, e
+    If the audio and SRT files do not exist, this method will first trigger
+    the `generate_audio_step`.
+
+    Args:
+      context: The `VideoGenerationContext` containing all necessary inputs like
+        image paths, article content, and audio/SRT file locations.
+
+    Returns:
+      A `Storyboard` object representing the generated storyboard.
+    """
+    audio_file_path = os.path.join(context.workdir, AUDIO_FILE_NAME)
+    srt_file_path = os.path.join(context.workdir, SRT_FILE_NAME)
+
+    if not os.path.exists(audio_file_path) or not os.path.exists(srt_file_path):
+      self.generate_audio_step(context)
+
+    return storyboarding.create_storyboard_step(
+        article_content=context.article_content,
+        image_paths=context.image_paths,
+        main_audio_path=audio_file_path,
+        srt_path=srt_file_path,
+        generate_text_overlays=not context.disable_text_overlays,
+        splash_image=context.splash_image,
+        output_file_path=os.path.join(context.workdir, STORYBOARD_FILE_NAME),
     )
-  except IOError as e:
-    logging.exception(
-        "Unable to process storyboard file: %s \n Error: %s \n",
-        storyboard_file_path,
-        e,
-    )
+
+  def generate_video_step(self, context: pipeline.VideoGenerationContext):
+    """Generates the final video output from a storyboard.
+
+    If a storyboard file exists, it's loaded; otherwise, it's generated by
+    calling `generate_storyboard_step`.
+
+    Args:
+      context: The `VideoGenerationContext` providing access to the storyboard
+        and output video configuration.
+    """
+    storyboard_file_path = os.path.join(context.workdir, STORYBOARD_FILE_NAME)
+    if os.path.exists(storyboard_file_path):
+      storyboard = storyboarding.load_storyboard(storyboard_file_path)
+    else:
+      storyboard = self.generate_storyboard_step(context)
+
+    video.GenerateVideoFromImagesStep(
+        output_audio_path=f"{context.workdir}/{OUTPUT_AUDIO_FILE_NAME}",
+        output_video_path=f"{context.workdir}/{OUTPUT_VIDEO_FILE_NAME}",
+        burn_in_subtitles=context.burn_in_subtitles,
+    ).process(storyboard)
 
 
 def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:
@@ -207,7 +226,7 @@ def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:
   parser.add_argument(
       "--step",
       choices=["audio", "storyboard", "video"],
-      default=None,
+      default="video",
       help="Run a discrete step in the video generation flow.",
   )
   parser.add_argument(
@@ -262,19 +281,17 @@ def main(args=sys.argv[1:]):
       video_id=parsed_args.video_id or str(uuid.uuid4()),
   )
   parsed_args.article_path.close()
-  steps = (
-      [parsed_args.step]
-      if parsed_args.step
-      else ["audio", "storyboard", "video"]
-  )
 
   vertexai.init(project=context.gcp_project, location=context.gcp_location)
-  if "audio" in steps:
-    generate_audio_step(context)
-  if "storyboard" in steps:
-    generate_storyboard_step(context)
-  if "video" in steps:
-    generate_video_step(context)
+
+  video_generator = VideoGenerator()
+  match parsed_args.step:
+    case "audio":
+      video_generator.generate_audio_step(context)
+    case "storyboard":
+      video_generator.generate_storyboard_step(context)
+    case "video":
+      video_generator.generate_video_step(context)
 
 
 if __name__ == "__main__":

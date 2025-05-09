@@ -1,10 +1,11 @@
 """Steps to for Storyboard creation."""
 
 import json
+import os
 import re
 import textwrap
 import typing
-
+import msgspec
 import storyboarding
 from text import sentiment_analysis_step
 from vertexai import generative_models
@@ -560,6 +561,7 @@ def create_storyboard_step(
     article_content: str,
     generate_text_overlays: bool,
     splash_image: str | None = None,
+    output_file_path: os.PathLike[str] | None = None,
 ) -> storyboarding.Storyboard:
   """Assembles a Storyboard for video generation.
 
@@ -571,6 +573,7 @@ def create_storyboard_step(
     generate_text_overlays: Disable text overlay generation.
     splash_image: File name of the splash image (do not include filename
       extension).
+    output_file_path: File path to save the generated storyboard,if provided.
 
   Returns:
     A Storyboard.
@@ -595,10 +598,66 @@ def create_storyboard_step(
   analyze_sentiment = sentiment_analysis_step.SentimentAnalyzerStep()
   background_audio_path = analyze_sentiment.process(article_content)
 
-  return storyboarding.Storyboard(
+  storyboard = storyboarding.Storyboard(
       scenes=scenes,
       main_audio_path=main_audio_path,
       background_audio_path=background_audio_path,
       text_overlays=text_overlays,
       srt_path=srt_path,
   )
+
+  if output_file_path:
+    with open(output_file_path, "w", encoding="utf-8") as f:
+      f.write(msgspec.json.encode(storyboard).decode("utf-8"))
+
+  return storyboard
+
+
+class StoryboardLoadError(Exception):
+  """Custom exception for errors during storyboard loading."""
+
+  pass
+
+
+def load_storyboard(file_path: os.PathLike[str]) -> storyboarding.Storyboard:
+  """Loads a Storyboard object from a JSON file.
+
+  Args:
+    file_path: The path to the JSON file containing the storyboard data.
+
+  Returns:
+    A storyboarding.Storyboard object.
+
+  Raises:
+    StoryboardLoadError: If the file is not found, cannot be read,
+      is not valid UTF-8, contains invalid JSON, or if any other
+      unexpected error occurs during loading.
+  """
+  try:
+    with open(file_path, "r", encoding="utf-8") as storyboard_file:
+      storyboard = msgspec.json.decode(
+          storyboard_file.read(), type=storyboarding.Storyboard
+      )
+    return storyboard
+  except FileNotFoundError as e:
+    raise StoryboardLoadError(
+        f"Storyboard file not found: {file_path}: {e}"
+    ) from None
+  except IOError as e:
+    raise StoryboardLoadError(
+        f"Error reading storyboard file {file_path}: {e}"
+    ) from e
+  except UnicodeDecodeError as e:
+    raise StoryboardLoadError(
+        f"Error decoding storyboard file {file_path} as UTF-8. Ensure it's"
+        f" UTF-8 encoded: {e}"
+    ) from e
+  except msgspec.DecodeError as e:
+    raise StoryboardLoadError(
+        f"Invalid storyboard file format or content in {file_path}: {e}"
+    ) from e
+  except Exception as e:  # Catch any other unexpected errors
+    raise StoryboardLoadError(
+        "An unexpected error occurred while loading storyboard"
+        f" {file_path}: {e}"
+    ) from e

@@ -4,7 +4,6 @@ import unittest
 from unittest import mock
 import audio
 import audio.subtitles_generation_step
-import msgspec
 import parameterized
 from pipeline import video_generation_context
 import storyboarding
@@ -16,7 +15,7 @@ import video_generator_execution
 import yaml
 
 
-class VideoGeneratorExecutionTest(unittest.TestCase):
+class VideoGeneratorTest(unittest.TestCase):
 
   def setUp(self):
     self.temp_work_dir = tempfile.TemporaryDirectory()
@@ -37,6 +36,10 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
         },
         video_id=self.video_id,
     )
+    self.mock_script_generator = mock.MagicMock(spec=text.ScriptGenerator)
+    self.video_generator = video_generator_execution.VideoGenerator(
+        self.mock_script_generator
+    )
     return super().setUp()
 
   def tearDown(self):
@@ -49,70 +52,123 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
   @mock.patch.object(
       audio.text_to_speech_step, "TextToSpeechStep", autospec=True
   )
-  @mock.patch.object(
-      text.summarize_text_step, "SummarizeTextStep", autospec=True
-  )
-  def test_generate_audio_step(
-      self, mock_summarize_text_step, mock_tts_step, mock_subtitles_step
-  ):
-    video_generator_execution.generate_audio_step(self.context)
+  def test_generate_audio_step(self, mock_tts_step, mock_subtitles_step):
+    self.video_generator.generate_audio_step(self.context)
 
     self.assertTrue(os.path.exists(self.context.workdir))
-
-    mock_summarize_text_step.return_value.assert_called_once_with(
-        "test article content"
+    self.mock_script_generator.generate.assert_called_once_with(
+        self.context.article_content,
+        os.path.join(self.context.workdir, "1_script.json"),
     )
-    mock_tts_step.return_value.assert_called_once_with(
-        mock_summarize_text_step.return_value.return_value
-    )
-    mock_subtitles_step.return_value.assert_called_once_with(
-        mock_tts_step.return_value.return_value
-    )
+    mock_tts_step.assert_called_once_with(self.context)
+    mock_subtitles_step.assert_called_once_with(self.context)
 
   @mock.patch.object(storyboarding, "create_storyboard_step", autospec=True)
-  def test_generate_storyboard_step(self, mock_create_storyboard_step):
-    mock_create_storyboard_step.return_value = storyboarding.Storyboard(
-        scenes=[],
-        main_audio_path="path/to/audio",
-        background_audio_path="path/to/background_audio",
-        srt_path="srt/path",
+  @mock.patch.object(
+      video_generator_execution.VideoGenerator,
+      "generate_audio_step",
+      autospec=True,
+  )
+  def test_generate_storyboard_step_audio_exists(
+      self, mock_generate_audio_step, mock_create_storyboard_step
+  ):
+    create_workdir_step.CreateWorkdirStep(self.context).process()
+    audio_file_path = os.path.join(
+        self.context.workdir, video_generator_execution.AUDIO_FILE_NAME
     )
-    create_workdir_step.CreateWorkdirStep(self.context)("article content")
+    srt_file_path = os.path.join(
+        self.context.workdir, video_generator_execution.SRT_FILE_NAME
+    )
 
-    video_generator_execution.generate_storyboard_step(self.context)
+    with open(audio_file_path, "w"), open(srt_file_path, "w"):
+      sb = self.video_generator.generate_storyboard_step(self.context)
+      mock_generate_audio_step.assert_not_called()
 
-    with open(
-        self.context.workdir + "/4_storyboard.json", "r", encoding="utf-8"
-    ) as storyboard_file:
-      storyboard = msgspec.json.decode(
-          storyboard_file.read(), type=storyboarding.Storyboard
-      )
-      self.assertEqual(storyboard, mock_create_storyboard_step.return_value)
+      self.assertEqual(sb, mock_create_storyboard_step.return_value)
+
+  @mock.patch.object(storyboarding, "create_storyboard_step", autospec=True)
+  @mock.patch.object(
+      video_generator_execution.VideoGenerator,
+      "generate_audio_step",
+      autospec=True,
+  )
+  def test_generate_storyboard_step_audio_file_exists(
+      self, mock_generate_audio_step, mock_create_storyboard_step
+  ):
+    create_workdir_step.CreateWorkdirStep(self.context).process()
+    audio_file_path = os.path.join(
+        self.context.workdir, video_generator_execution.AUDIO_FILE_NAME
+    )
+    srt_file_path = os.path.join(
+        self.context.workdir, video_generator_execution.SRT_FILE_NAME
+    )
+
+    with open(audio_file_path, "w"), open(srt_file_path, "w"):
+      sb = self.video_generator.generate_storyboard_step(self.context)
+      mock_generate_audio_step.assert_not_called()
+
+      self.assertEqual(sb, mock_create_storyboard_step.return_value)
+
+  @mock.patch.object(storyboarding, "create_storyboard_step", autospec=True)
+  @mock.patch.object(
+      video_generator_execution.VideoGenerator,
+      "generate_audio_step",
+      autospec=True,
+  )
+  def test_generate_storyboard_step_audio_file_not_exist(
+      self, mock_generate_audio_step, mock_create_storyboard_step
+  ):
+    create_workdir_step.CreateWorkdirStep(self.context).process()
+
+    sb = self.video_generator.generate_storyboard_step(self.context)
+    mock_generate_audio_step.assert_called_once_with(
+        self.video_generator, self.context
+    )
+
+    self.assertEqual(sb, mock_create_storyboard_step.return_value)
 
   @mock.patch.object(video, "GenerateVideoFromImagesStep", autospec=True)
-  def test_generate_video_step(self, mock_generate_video_step):
-    create_workdir_step.CreateWorkdirStep(self.context)("article content")
-    storyboard = storyboarding.Storyboard(
-        scenes=[],
-        main_audio_path="path/to/audio",
-        background_audio_path="path/to/background_audio",
-        srt_path="srt/path",
+  @mock.patch.object(storyboarding, "load_storyboard", autospec=True)
+  @mock.patch.object(
+      video_generator_execution.VideoGenerator,
+      "generate_storyboard_step",
+      autospec=True,
+  )
+  def test_generate_video_step_storyboard_exists(
+      self,
+      mock_generate_storyboard_step,
+      mock_load_storyboard,
+      mock_generate_video_step,
+  ):
+    create_workdir_step.CreateWorkdirStep(self.context).process()
+    storyboard_path = os.path.join(
+        self.context.workdir, video_generator_execution.STORYBOARD_FILE_NAME
     )
-    with open(
-        self.context.workdir + "/4_storyboard.json", "w", encoding="utf-8"
-    ) as storyboard_file:
-      storyboard_file.write(msgspec.json.encode(storyboard).decode("utf-8"))
+    with open(storyboard_path, "w"):
+      self.video_generator.generate_video_step(self.context)
+      mock_generate_storyboard_step.assert_not_called()
 
-    video_generator_execution.generate_video_step(self.context)
+      mock_generate_video_step.return_value.process.assert_called_once_with(
+          mock_load_storyboard.return_value
+      )
 
-    mock_generate_video_step.assert_called_once_with(
-        output_audio_path=f"{self.context.workdir}/6_finalaudio.mp3",
-        output_video_path=f"{self.context.workdir}/5_withaudiovideo.mp4",
-        burn_in_subtitles=False,
-    )
-    mock_generate_video_step.return_value.process.assert_called_once_with(
-        storyboard
-    )
+  @mock.patch.object(video, "GenerateVideoFromImagesStep", autospec=True)
+  @mock.patch.object(
+      video_generator_execution.VideoGenerator,
+      "generate_storyboard_step",
+      autospec=True,
+  )
+  def test_generate_video_step_storyboard_not_exists(
+      self,
+      mock_generate_storyboard_step,
+      mock_generate_video_step,
+  ):
+    create_workdir_step.CreateWorkdirStep(self.context).process()
+
+    self.video_generator.generate_video_step(self.context)
+    mock_generate_storyboard_step.assert_called_once()
+
+    mock_generate_video_step.assert_called_once()
 
   def setup_test_env_for_main(self, directory: tempfile.TemporaryDirectory):
     directory_path = directory.name
@@ -156,21 +212,15 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
   ])
   @mock.patch.object(vertexai, "init", autospec=True)
   @mock.patch.object(
-      video_generator_execution, "generate_audio_step", autospec=True
-  )
-  @mock.patch.object(
-      video_generator_execution, "generate_storyboard_step", autospec=True
-  )
-  @mock.patch.object(
-      video_generator_execution, "generate_video_step", autospec=True
+      video_generator_execution.VideoGenerator,
+      "generate_video_step",
+      autospec=True,
   )
   def test_main_configures_context(
       self,
       context_attr,
       context_attr_expected_value,
       mock_generate_video_step,
-      mock_generate_storyboard_step,
-      mock_generate_audio_step,
       _,
   ):
     self.setup_test_env_for_main(self.temp_work_dir)
@@ -186,18 +236,8 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
         self.temp_work_dir.name + "/images",
     ])
 
-    # all three steps are called with the same arg (the context)
-    self.assertEqual(
-        mock_generate_audio_step.call_args,
-        mock_generate_storyboard_step.call_args,
-    )
-    self.assertEqual(
-        mock_generate_storyboard_step.call_args,
-        mock_generate_video_step.call_args,
-    )
-
     # the context is what we expect
-    context = mock_generate_audio_step.call_args[0][0]
+    context = mock_generate_video_step.call_args[0][1]
     self.assertEqual(
         getattr(context, context_attr), context_attr_expected_value
     )
@@ -217,7 +257,7 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
     self.setup_test_env_for_main(self.temp_work_dir)
 
     with mock.patch.object(
-        video_generator_execution, step, autospec=True
+        video_generator_execution.VideoGenerator, step, autospec=True
     ) as mock_generate_step:
       video_generator_execution.main([
           "--config",
@@ -236,13 +276,19 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
 
   @mock.patch.object(vertexai, "init", autospec=True)
   @mock.patch.object(
-      video_generator_execution, "generate_audio_step", autospec=True
+      video_generator_execution.VideoGenerator,
+      "generate_audio_step",
+      autospec=True,
   )
   @mock.patch.object(
-      video_generator_execution, "generate_storyboard_step", autospec=True
+      video_generator_execution.VideoGenerator,
+      "generate_storyboard_step",
+      autospec=True,
   )
   @mock.patch.object(
-      video_generator_execution, "generate_video_step", autospec=True
+      video_generator_execution.VideoGenerator,
+      "generate_video_step",
+      autospec=True,
   )
   def test_main_configures_context_image_paths(
       self,
@@ -263,7 +309,7 @@ class VideoGeneratorExecutionTest(unittest.TestCase):
     ])
 
     # the context is what we expect
-    context = mock_generate_video_step.call_args[0][0]
+    context = mock_generate_video_step.call_args[0][1]
     self.assertCountEqual(
         context.image_paths,
         [

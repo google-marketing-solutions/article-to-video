@@ -7,4 +7,6 @@ from .model import TextOverlay
 from .storyboard_steps import create_scenes
 from .storyboard_steps import create_storyboard_step
 from .storyboard_steps import create_text_overlays
+from .storyboard_steps import load_storyboard
 from .storyboard_steps import serialize_scenes
+from .storyboard_steps import StoryboardLoadError

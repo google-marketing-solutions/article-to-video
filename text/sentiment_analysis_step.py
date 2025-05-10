@@ -3,7 +3,6 @@
 import enum
 import logging
 from google.cloud import language_v2
-import pipeline
 
 
 class Sentiment(enum.Enum):
@@ -20,7 +19,7 @@ class Intensity(enum.Enum):
   INTENSE = 3
 
 
-class SentimentAnalyzerStep(pipeline.base.BaseStep):
+class SentimentAnalyzerStep:
   """A pipeline step that determines the sentiment of the article summary."""
 
   def __init__(self, client=None):

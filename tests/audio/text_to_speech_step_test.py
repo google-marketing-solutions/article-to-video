@@ -45,7 +45,7 @@ class TextToSpeechStepTest(unittest.TestCase):
 
     mock_open = mock.mock_open()
     with mock.patch("builtins.open", mock_open) as mocked_file:
-      step(
+      step.process(
           text.VoiceoverScript(
               "language",
               "voice",

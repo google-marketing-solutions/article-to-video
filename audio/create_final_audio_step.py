@@ -4,11 +4,10 @@ import logging
 import math
 from moviepy import editor as mpy
 import moviepy.audio.fx.all as afx
-import pipeline
 import storyboarding
 
 
-class CreateFinalAudioStep(pipeline.BaseStep):
+class CreateFinalAudioStep:
   """Pipeline step to combine background and narration audio."""
 
   _FADE_OUT_DURATION = 3

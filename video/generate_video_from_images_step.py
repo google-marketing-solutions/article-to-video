@@ -5,7 +5,6 @@ from audio import create_final_audio_step
 from moviepy import editor as mpy
 from moviepy.video.tools import subtitles as mpy_subtitles
 import numpy as np
-import pipeline
 import storyboarding
 from video import effects
 from video import video_generation_errors
@@ -14,7 +13,7 @@ from video.create_text_overlay_step import (create_text_overlay_video_clip)
 _LOGO_MARGIN = 16  # pixels
 
 
-class GenerateVideoFromImagesStep(pipeline.BaseStep):
+class GenerateVideoFromImagesStep:
   """Class that will stitch together the input images to generate base video."""
 
   def __init__(
@@ -169,3 +168,6 @@ class GenerateVideoFromImagesStep(pipeline.BaseStep):
       clip.close()
 
     return self._output_video_path
+
+  def __call__(self, storyboard: storyboarding.Storyboard) -> str:
+    return self.process(storyboard)

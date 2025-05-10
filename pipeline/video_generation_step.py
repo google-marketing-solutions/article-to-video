@@ -1,12 +1,10 @@
 """Abstract representation of a step in the video generation pipeline."""
 
 import logging
-from typing import Any
-from pipeline import base
 from pipeline.video_generation_context import VideoGenerationContext
 
 
-class VideoGenerationStep(base.BaseStep[tuple[Any, ...], Any]):
+class VideoGenerationStep:
   """Abstract representation of a step in the video generation pipeline.
 
   This class is supposed to be used as a base class for all the intermediate

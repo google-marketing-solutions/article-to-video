@@ -46,6 +46,34 @@ class VideoGeneratorTest(unittest.TestCase):
     self.temp_work_dir.cleanup()
     return super().tearDown()
 
+  @mock.patch.object(os, "makedirs", autospec=True)
+  def test_generate_script_step(self, mock_makedirs):
+    mock_script = mock.MagicMock(spec=text.VoiceoverScript)
+    self.mock_script_generator.generate.return_value = mock_script
+
+    self.context.multivoice = False
+    self.context.multitext = False
+    self.context.language = "en-US"
+
+    returned_script = self.video_generator.generate_script_step(self.context)
+
+    mock_makedirs.assert_called_once_with(self.context.workdir, exist_ok=True)
+    self.assertEqual(self.mock_script_generator.language, "en-US")
+    self.assertEqual(self.mock_script_generator.speakers, 1)
+    self.assertEqual(self.mock_script_generator.multitext, False)
+    self.mock_script_generator.generate.assert_called_once_with(
+        self.context.article_content,
+        os.path.join(
+            self.context.workdir, video_generator_execution.SCRIPT_FILE_NAME
+        ),
+    )
+    self.assertEqual(returned_script, mock_script)
+
+    self.mock_script_generator.reset_mock()
+    self.context.multivoice = True
+    self.video_generator.generate_script_step(self.context)
+    self.assertEqual(self.mock_script_generator.speakers, 2)
+
   @mock.patch.object(
       audio.subtitles_generation_step, "SubtitlesGenerationStep", autospec=True
   )

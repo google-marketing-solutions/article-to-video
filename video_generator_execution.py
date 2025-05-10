@@ -32,11 +32,11 @@ from audio import text_to_speech_step
 import pipeline
 import storyboarding
 import text
-from text import summarize_text_step
-from util import create_workdir_step
 import vertexai
 import video
 import yaml
+
+SCRIPT_FILE_NAME = "1_script.json"
 
 AUDIO_FILE_NAME = "2_readaloud.wav"
 
@@ -69,28 +69,50 @@ class VideoGenerator:
         generating scripts from article content. Defaults to a ScriptGenerator
         configured for 2 speakers.
     """
-    self.script_generator = script_generator
+    self._script_generator = script_generator
 
-  def generate_audio_step(self, context: pipeline.VideoGenerationContext):
+  def generate_script_step(
+      self, context: pipeline.VideoGenerationContext
+  ) -> text.VoiceoverScript:
+    """Generates a voiceover script from the provided article content.
+
+    Args:
+      context: The `VideoGenerationContext` containing configuration and data
+        for the script generation process.
+
+    Returns:
+      The generated voiceover script.
+    """
+    os.makedirs(context.workdir, exist_ok=True)
+
+    script_path = os.path.join(context.workdir, SCRIPT_FILE_NAME)
+    self._script_generator.language = context.language
+    self._script_generator.speakers = 2 if context.multivoice else 1
+    self._script_generator.multitext = context.multitext
+    return self._script_generator.generate(context.article_content, script_path)
+
+  def generate_audio_step(
+      self, context: pipeline.VideoGenerationContext
+  ) -> str:
     """Generates audio and subtitles from the provided article content.
 
     Args:
       context: The `VideoGenerationContext` containing configuration and data
         for the audio generation process.
+
+    Returns:
+      The path to the generated audio file.
     """
-    self.script_generator.language = context.language
-    self.script_generator.speakers = 2 if context.multivoice else 1
-    self.script_generator.multitext = context.multitext
-    pipeline.Pipeline(
-        steps=[
-            create_workdir_step.CreateWorkdirStep(context),
-            summarize_text_step.SummarizeTextStep(
-                context.workdir, self.script_generator
-            ),
-            text_to_speech_step.TextToSpeechStep(context),
-            subtitles_generation_step.SubtitlesGenerationStep(context),
-        ]
-    ).process(context.article_content)
+    script_path = os.path.join(context.workdir, SCRIPT_FILE_NAME)
+    if os.path.exists(script_path):
+      script = text.load_script(script_path)
+    else:
+      script = self.generate_script_step(context)
+
+    tts_result = text_to_speech_step.TextToSpeechStep(context).process(script)
+    return subtitles_generation_step.SubtitlesGenerationStep(context).process(
+        tts_result
+    )
 
   def generate_storyboard_step(
       self, context: pipeline.VideoGenerationContext
@@ -225,7 +247,7 @@ def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:
   )
   parser.add_argument(
       "--step",
-      choices=["audio", "storyboard", "video"],
+      choices=["script", "audio", "storyboard", "video"],
       default="video",
       help="Run a discrete step in the video generation flow.",
   )
@@ -286,6 +308,8 @@ def main(args=sys.argv[1:]):
 
   video_generator = VideoGenerator()
   match parsed_args.step:
+    case "script":
+      video_generator.generate_script_step(context)
     case "audio":
       video_generator.generate_audio_step(context)
     case "storyboard":

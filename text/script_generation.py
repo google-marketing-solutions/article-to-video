@@ -29,6 +29,42 @@ class VoiceoverScript:
   text: str
 
 
+class ScriptLoadError(Exception):
+  """Custom exception for errors during voiceover script loading."""
+
+  pass
+
+
+def load_script(script_path: str) -> VoiceoverScript:
+  """Loads a voiceover script from a JSON file."""
+  try:
+    with open(script_path, "r", encoding="utf-8") as file:
+      script_content = file.read()
+      return msgspec.json.decode(script_content, type=VoiceoverScript)
+  except FileNotFoundError:
+    raise ScriptLoadError(
+        f"Voiceover script file not found: {script_path}"
+    ) from None
+  except IOError as e:
+    raise ScriptLoadError(
+        f"Error reading voiceover script file {script_path}: {e}"
+    ) from e
+  except UnicodeDecodeError as e:
+    raise ScriptLoadError(
+        f"Error decoding voiceover script file {script_path} as UTF-8. Ensure"
+        " it's UTF-8 encoded."
+    ) from e
+  except msgspec.DecodeError as e:
+    raise ScriptLoadError(
+        f"Invalid voiceover script file format or content in {script_path}: {e}"
+    ) from e
+  except Exception as e:  # Catch any other unexpected errors
+    raise ScriptLoadError(
+        "An unexpected error occurred while loading voiceover script"
+        f" {script_path}: {e}"
+    ) from e
+
+
 VOICES = {
     # English (US)
     "en-US": [

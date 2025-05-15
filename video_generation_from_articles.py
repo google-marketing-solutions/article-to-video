@@ -1,11 +1,12 @@
 """Flask app for handling HTTP responses."""
 
+import glob
 import logging
 import os
-import time
 import uuid
 import flask
 import pipeline
+from util import gcs_utils
 import vertexai
 from video import video_generation_errors
 import video_generator_execution
@@ -16,14 +17,16 @@ config = yaml.safe_load(open('config.yml'))
 vertexai.init(project=config['gcp_project'], location=config['gcp_location'])
 
 logging.basicConfig(level=logging.INFO)
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', '.gif', '.bmp'}
 
 app = flask.Flask(__name__)
 
 
 @app.route('/')
 def index():
-  return flask.send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
+  return flask.send_from_directory(
+      os.path.join(app.root_path, 'static'), 'index.html'
+  )
 
 
 @app.route('/favicon.ico')
@@ -74,10 +77,10 @@ def upload_file(video_id: str):
     )
 
   folder = f'uploads/{video_id}/images'
-  image_file = f'{int(time.time() * 10000000)}.{extension}'
+  image_file = file.filename
 
   os.makedirs(folder, exist_ok=True)
-  upload_path = os.path.join(folder, image_file)
+  upload_path = os.path.join(folder, file.filename)
   file.save(upload_path)
 
   return flask.jsonify({'file': image_file})
@@ -87,25 +90,76 @@ def upload_file(video_id: str):
 def generate_video(video_id: str):
   """Generates a video with given inputs.
 
+  This endpoint accepts `multipart/form-data` requests.
+
+  **Path Parameter:**
+    - `video_id` (str): A unique identifier for this video generation request.
+
+  **Multipart/form-data Parameters:**
+    - `article_content` (file): The text file (e.g., .txt) containing the
+      article content.
+    - Image files (files): One or more image files (e.g., .png, .jpg,
+      .jpeg, .gif, .bmp). The server processes all uploaded files with
+      allowed extensions. You can use distinct names for each file part
+      (e.g., `image_file1`, `image_file2`).
+    - All of the command line parameters supported by VideoGenerator are also
+      supported.
+
   Args:
       video_id: Id of the video currently being generated.
 
   Returns:
       JSON with the path to the file generated.
   """
-  data = flask.request.get_json()
+  request_params = dict(flask.request.form)
+  print(request_params)
+
+  image_paths = []
+  file_storage = flask.request.files.values()
+  for file in file_storage:
+    extension = file.filename.rsplit('.', 1)[1].lower()
+    if extension not in ALLOWED_EXTENSIONS:
+      logging.log(
+          logging.INFO, 'Skipping unsupported file extnsion: %s', extension
+      )
+      continue
+
+    folder = f'uploads/{video_id}/images'
+
+    os.makedirs(folder, exist_ok=True)
+    upload_path = os.path.join(folder, file.filename)
+    file.save(upload_path)
+    image_paths.append(upload_path)
+
   try:
-    context = pipeline.VideoGenerationContext(config, data, video_id)
-    video_uri = video_generator_execution.VideoGeneratorExecution().genvideo(
+    if 'article_content' in flask.request.files:
+      article_bytes = flask.request.files['article_content'].read()
+      request_params['article_content'] = article_bytes.decode('utf-8')
+    request_params['image_paths'] = image_paths or glob.glob(
+        f'uploads/{video_id}/images/*'
+    )
+
+    # In a production-ready solution, the video generation process would
+    # typically be handled by a separate, asynchronous worker process or a
+    # managed service  keep the main application responsive. For simplicity in
+    # this demo, it's handled synchronously.
+    context = pipeline.VideoGenerationContext(config, request_params, video_id)
+    video_path = video_generator_execution.VideoGenerator().generate_video_step(
         context
     )
+    gcs_uri = gcs_utils.upload_to_gcs(
+        video_path,
+        config['gcs_bucket_name'],
+        os.path.join('generated_videos', video_id, 'video.mp4'),
+    )
+
     return flask.jsonify({
         'status': 'Your video has been generated successfully',
-        'path': video_uri,
+        'path': gcs_uri.replace('gs://', 'https://storage.googleapis.com/'),
     })
   except video_generation_errors.NoImagesFoundError:
     return flask.jsonify(
-        {'status': 'Not enought suitable images found in article'}
+        {'status': 'Not enough suitable images found in article'}
     )
   except Exception:  # pylint: disable=broad-exception-caught
     return flask.jsonify({'status': 'Unknown error generating your video.'})

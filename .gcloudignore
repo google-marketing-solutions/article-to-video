@@ -1,0 +1,10 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Add other files/directories you typically ignore, e.g.:
+.env
+.vscode/
+/venv/

@@ -37,15 +37,17 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
 
   def process(
       self, initial_value: script_generation.VoiceoverScript
-  ) -> Tuple[str, str]:
+  ) -> Tuple[str, str, str]:
     """Generate audio for the provided summary text, single or multi-voice.
 
     Args:
         initial_value: The script for which to generate TTS.
 
     Returns:
-        A tuple where the first item is the path to the saved audio file and the
-        second item is the transcript or summary text.
+        A tuple containing:
+          - The local path to the generated audio file.
+          - The GCS URI of the uploaded audio file.
+          - The original script text.
     """
     script = initial_value
     output_path = f"{self.workdir}/{self._OUTPUT_AUDIO_FILE}"
@@ -71,4 +73,4 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
         self.gcs_bucket_name,
         f"{self.video_id}/{self._OUTPUT_AUDIO_FILE}",
     )
-    return audio_gcs_uri, script.text
+    return output_path, audio_gcs_uri, script.text

@@ -30,7 +30,7 @@ class SubtitlesGenerationStep(pipeline.VideoGenerationStep):
         text)
 
     Returns:
-      Local file path for the and generated SRT file.
+      The path to the generated SRT file.
     """
 
     words = self._transcribe_audio(audio_and_transcript[0])

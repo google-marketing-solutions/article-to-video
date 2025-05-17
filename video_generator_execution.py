@@ -23,9 +23,11 @@ Typical usage example:
 """
 
 import argparse
+import hashlib
 import logging
 import os
 import sys
+from typing import Any, Iterable, Tuple
 import uuid
 from audio import subtitles_generation_step
 from audio import text_to_speech_step
@@ -69,9 +71,100 @@ class VideoGenerator:
         generating scripts from article content. Defaults to a ScriptGenerator
         configured for 2 speakers.
     """
+    self.logger = logging.getLogger(self.__class__.__name__)
     self._script_generator = script_generator or text.ScriptGenerator(
         speakers=2
     )
+
+  def _save_signature(
+      self,
+      signature_file_path: os.PathLike[str],
+      data_deps: Iterable[Any],
+      file_deps: Iterable[os.PathLike[str]] | None = None,
+  ) -> str:
+    """Saves a signature hash for a given set of dependencies.
+
+    This is used for caching purposes to determine if a step needs to be
+    re-run.
+
+    Args:
+      signature_file_path: The path where the signature file will be saved.
+      data_deps: An iterable of data dependencies to include in the signature.
+        Each item will be converted to its string representation.
+      file_deps: An optional iterable of file paths whose contents will be
+        included in the signature.
+
+    Returns:
+      The hash signature as a string.
+    """
+    files = file_deps or []
+    signature = hashlib.sha256()
+    for dep in data_deps:
+      signature.update(str(dep).encode("utf-8"))
+    for file_path in files:
+      with open(file_path, "rb") as f:
+        signature.update(f.read())
+    hexdigest = signature.hexdigest()
+
+    dirname = os.path.dirname(signature_file_path)
+    os.makedirs(dirname, exist_ok=True)
+    with open(signature_file_path, "w", encoding="utf-8") as f:
+      f.write(hexdigest)
+    return hexdigest
+
+  def _load_signature(
+      self, signature_file_path: os.PathLike[str]
+  ) -> str | None:
+    """Loads a previously saved signature hash from a file.
+
+    Args:
+      signature_file_path: The path to the signature file.
+
+    Returns:
+      The signature hash as a string if the file exists, otherwise None.
+    """
+    if not os.path.exists(signature_file_path):
+      return None
+    with open(signature_file_path, "r", encoding="utf-8") as f:
+      return f.read()
+
+  def _is_output_cache_valid(
+      self,
+      output_paths_to_check: list[os.PathLike[str]],
+      signature_file_path: os.PathLike[str],
+      current_data_deps: Iterable[Any],
+      current_file_deps: Iterable[os.PathLike[str]] | None = None,
+  ) -> bool:
+    """Determines if cached outputs can be used based on a signature.
+
+    Compares a newly generated signature (based on current dependencies)
+    with a cached signature. The cached signature is overwritted with the new
+    signature.
+
+    Args:
+      output_paths_to_check: A list of file paths that are expected to exist if
+        the cache is valid.
+      signature_file_path: The path to the file storing the cached signature.
+      current_data_deps: An iterable of data dependencies for generating the
+        current signature. Each item will be converted to its string
+        representation.
+      current_file_deps: An optional iterable of file path dependencies for
+        generating the current signature.
+
+    Returns:
+      True if the cached output can be used, False otherwise.
+    """
+    current_file_deps = current_file_deps or []
+    if not all([os.path.exists(path) for path in output_paths_to_check]):
+      return False
+
+    cached_signature = self._load_signature(signature_file_path)
+    current_signature = self._save_signature(
+        signature_file_path,
+        data_deps=current_data_deps,
+        file_deps=current_file_deps,
+    )
+    return cached_signature == current_signature
 
   def generate_script_step(
       self, context: pipeline.VideoGenerationContext
@@ -85,8 +178,20 @@ class VideoGenerator:
     Returns:
       The generated voiceover script.
     """
-    os.makedirs(context.workdir, exist_ok=True)
+    script_path = os.path.join(context.workdir, SCRIPT_FILE_NAME)
+    script_meta_path = os.path.join(context.workdir, ".meta", "script.meta")
 
+    if self._is_output_cache_valid(
+        output_paths_to_check=[script_path],
+        signature_file_path=script_meta_path,
+        current_data_deps=[context],
+    ):
+      self.logger.info("Using cached script...")
+      return text.load_script(script_path)
+
+    self.logger.info("Generating new script...")
+
+    os.makedirs(context.workdir, exist_ok=True)
     script_path = os.path.join(context.workdir, SCRIPT_FILE_NAME)
     self._script_generator.language = context.language
     self._script_generator.speakers = 2 if context.multivoice else 1
@@ -95,7 +200,7 @@ class VideoGenerator:
 
   def generate_audio_step(
       self, context: pipeline.VideoGenerationContext
-  ) -> str:
+  ) -> Tuple[os.PathLike[str], str]:
     """Generates audio and subtitles from the provided article content.
 
     Args:
@@ -103,18 +208,31 @@ class VideoGenerator:
         for the audio generation process.
 
     Returns:
-      The path to the generated audio file.
+      A tuple containing the local path to the generated audio file and the
+      local path to the generated SRT file.
     """
-    script_path = os.path.join(context.workdir, SCRIPT_FILE_NAME)
-    if os.path.exists(script_path):
-      script = text.load_script(script_path)
-    else:
-      script = self.generate_script_step(context)
+    script = self.generate_script_step(context)
 
-    tts_result = text_to_speech_step.TextToSpeechStep(context).process(script)
-    return subtitles_generation_step.SubtitlesGenerationStep(context).process(
-        tts_result
+    audio_path = os.path.join(context.workdir, AUDIO_FILE_NAME)
+    srt_path = os.path.join(context.workdir, SRT_FILE_NAME)
+    audio_meta_path = os.path.join(context.workdir, ".meta", "audio.meta")
+
+    if self._is_output_cache_valid(
+        output_paths_to_check=[audio_path, srt_path],
+        signature_file_path=audio_meta_path,
+        current_data_deps=[context, script],
+    ):
+      self.logger.info("Using cached audio...")
+      return (audio_path, srt_path)
+    self.logger.info("Generating new audio...")
+
+    audio_path, audio_gcs_uri, script_text = (
+        text_to_speech_step.TextToSpeechStep(context).process(script)
     )
+    subtitles_generation_step.SubtitlesGenerationStep(context).process(
+        (audio_gcs_uri, script_text)
+    )
+    return audio_path, srt_path
 
   def generate_storyboard_step(
       self, context: pipeline.VideoGenerationContext
@@ -131,20 +249,30 @@ class VideoGenerator:
     Returns:
       A `Storyboard` object representing the generated storyboard.
     """
-    audio_file_path = os.path.join(context.workdir, AUDIO_FILE_NAME)
-    srt_file_path = os.path.join(context.workdir, SRT_FILE_NAME)
+    audio_path, srt_path = self.generate_audio_step(context)
 
-    if not os.path.exists(audio_file_path) or not os.path.exists(srt_file_path):
-      self.generate_audio_step(context)
+    storyboard_path = os.path.join(context.workdir, STORYBOARD_FILE_NAME)
+    storyboard_meta_path = os.path.join(
+        context.workdir, ".meta", "storyboard.meta"
+    )
+    if self._is_output_cache_valid(
+        output_paths_to_check=[storyboard_path],
+        signature_file_path=storyboard_meta_path,
+        current_data_deps=[context],
+        current_file_deps=[srt_path],
+    ):
+      self.logger.info("Using cached storyboard...")
+      return storyboarding.load_storyboard(storyboard_path)
+    self.logger.info("Generating new storyboard...")
 
     return storyboarding.create_storyboard_step(
         article_content=context.article_content,
         image_paths=context.image_paths,
-        main_audio_path=audio_file_path,
-        srt_path=srt_file_path,
+        main_audio_path=audio_path,
+        srt_path=srt_path,
         generate_text_overlays=not context.disable_text_overlays,
         splash_image=context.splash_image,
-        output_file_path=os.path.join(context.workdir, STORYBOARD_FILE_NAME),
+        output_file_path=storyboard_path,
     )
 
   def generate_video_step(
@@ -162,11 +290,19 @@ class VideoGenerator:
     Returns:
       The local path to the generated video file.
     """
-    storyboard_file_path = os.path.join(context.workdir, STORYBOARD_FILE_NAME)
-    if os.path.exists(storyboard_file_path):
-      storyboard = storyboarding.load_storyboard(storyboard_file_path)
-    else:
-      storyboard = self.generate_storyboard_step(context)
+    storyboard = self.generate_storyboard_step(context)
+
+    video_meta_path = os.path.join(context.workdir, ".meta", "video.meta")
+    video_path = os.path.join(context.workdir, OUTPUT_VIDEO_FILE_NAME)
+
+    if self._is_output_cache_valid(
+        output_paths_to_check=[video_path],
+        signature_file_path=video_meta_path,
+        current_data_deps=[context, storyboard],
+    ):
+      self.logger.info("Using cached video...")
+      return video_path
+    self.logger.info("Generating new video...")
 
     return video.GenerateVideoFromImagesStep(
         output_audio_path=f"{context.workdir}/{OUTPUT_AUDIO_FILE_NAME}",

@@ -14,8 +14,10 @@ class VideoGenerationContextTest(unittest.TestCase):
   }
 
   def test_loading_from_config(self):
-    context = VideoGenerationContext(
-        self.CONFIG, {}, '0218e40f-d722-4391-8ef7-47bbdaa29200'
+    context = VideoGenerationContext.from_request(
+        self.CONFIG,
+        {'article_content': 'my article', 'image_paths': []},
+        '0218e40f-d722-4391-8ef7-47bbdaa29200',
     )
 
     self.assertEqual(context.gcp_project, 'my_gcp_project')
@@ -28,35 +30,34 @@ class VideoGenerationContextTest(unittest.TestCase):
     )
 
   def test_loading_request_params_defaults(self):
-    context = VideoGenerationContext(
-        self.CONFIG, {}, '0218e40f-d722-4391-8ef7-47bbdaa29200'
+    context = VideoGenerationContext.from_request(
+        self.CONFIG,
+        {'article_content': 'my article', 'image_paths': []},
+        '0218e40f-d722-4391-8ef7-47bbdaa29200',
     )
 
-    self.assertEqual(context.ken_burns, False)
-    self.assertEqual(context.disable_text_overlays, False)
-    self.assertEqual(context.burn_in_subtitles, False)
     self.assertEqual(context.language, 'en-US')
-    self.assertEqual(context.sentiment, False)
-    self.assertEqual(context.video_overlay, False)
-    self.assertEqual(context.title, False)
+    self.assertEqual(context.burn_in_subtitles, True)
+    self.assertEqual(context.disable_text_overlays, False)
+    self.assertEqual(context.multitext, False)
+    self.assertEqual(context.multivoice, True)
 
   def test_loading_request_params(self):
     request_params = {
-        'ken_burns': True,
-        'language_of_article': 'Portuguese (Brazil)',
-        'burned_in_subtitles': True,
+        'article_content': 'my article',
+        'image_paths': [],
         'language': 'pt-BR',
-        'sentiment': True,
-        'video_overlay': True,
-        'title': True,
+        'burn_in_subtitles': False,
+        'disable_text_overlays': True,
+        'multitext': True,
+        'multivoice': False,
     }
-    context = VideoGenerationContext(
+    context = VideoGenerationContext.from_request(
         self.CONFIG, request_params, '0218e40f-d722-4391-8ef7-47bbdaa29200'
     )
 
-    self.assertEqual(context.ken_burns, True)
-    self.assertEqual(context.burn_in_subtitles, False)
     self.assertEqual(context.language, 'pt-BR')
-    self.assertEqual(context.sentiment, True)
-    self.assertEqual(context.video_overlay, True)
-    self.assertEqual(context.title, True)
+    self.assertEqual(context.burn_in_subtitles, False)
+    self.assertEqual(context.disable_text_overlays, True)
+    self.assertEqual(context.multitext, True)
+    self.assertEqual(context.multivoice, False)

@@ -143,7 +143,9 @@ def generate_video(video_id: str):
     # typically be handled by a separate, asynchronous worker process or a
     # managed service  keep the main application responsive. For simplicity in
     # this demo, it's handled synchronously.
-    context = pipeline.VideoGenerationContext(config, request_params, video_id)
+    context = pipeline.VideoGenerationContext.from_request(
+        config, request_params, video_id
+    )
     video_path = video_generator_execution.VideoGenerator().generate_video_step(
         context
     )

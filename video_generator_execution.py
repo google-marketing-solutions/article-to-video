@@ -249,7 +249,7 @@ def _parse_args(args=sys.argv[1:]) -> argparse.Namespace:
       "--language",
       "-l",
       default="en-US",
-      choices=["en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "pt-BR"],
+      choices=pipeline.SUPPORTED_LANGUAGES,
       help="The language for the output video. Defaults to 'en-US'.",
   )
   parser.add_argument(
@@ -295,7 +295,7 @@ def main(args=sys.argv[1:]):
   if parsed_args.debug:
     logging.getLogger().setLevel(logging.DEBUG)
 
-  context = pipeline.VideoGenerationContext(
+  context = pipeline.VideoGenerationContext.from_request(
       _get_config(parsed_args.config),
       request_params={
           "article_content": parsed_args.article_path.read(),

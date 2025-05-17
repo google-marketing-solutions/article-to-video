@@ -19,7 +19,7 @@ class SubtitlesGenerationStepTest(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
-    self.context = pipeline.VideoGenerationContext(
+    self.context = pipeline.VideoGenerationContext.from_request(
         {
             "gcp_project": "my_gcp_project",
             "gcp_location": "us_west",
@@ -28,7 +28,7 @@ class SubtitlesGenerationStepTest(unittest.TestCase):
             "gcs_bucket_image_path": "my_gcs_bucket_image_path",
             "output_path": "tests/audio/generated",
         },
-        request_params={},
+        request_params={"article_content": "my article", "image_paths": []},
         video_id="testvideoid",
     )
 

@@ -5,6 +5,7 @@ import json
 import textwrap
 from typing import Literal
 import msgspec
+import pipeline
 from vertexai import generative_models as genai
 
 
@@ -106,9 +107,7 @@ class ScriptGenerator:
       self,
       speakers: Literal[1, 2],
       multitext: bool = False,
-      language: Literal[
-          "en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "pt-BR"
-      ] = "en-US",
+      language: pipeline.SupportedLanguage = "en-US",
       llm: genai.GenerativeModel | None = None,
   ):
     self.speakers = speakers

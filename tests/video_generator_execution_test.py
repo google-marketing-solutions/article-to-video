@@ -8,7 +8,6 @@ import parameterized
 from pipeline import video_generation_context
 import storyboarding
 import text
-from util import create_workdir_step
 import vertexai
 import video
 import video_generator_execution
@@ -21,7 +20,7 @@ class VideoGeneratorTest(unittest.TestCase):
     self.temp_work_dir = tempfile.TemporaryDirectory()
 
     self.video_id = "test_video_id"
-    self.context = video_generation_context.VideoGenerationContext(
+    self.context = video_generation_context.VideoGenerationContext.from_request(
         video_generation_context.VideoGenerationContext.Config({
             "gcp_project": "test-project",
             "gcp_location": "us-central1",
@@ -100,7 +99,7 @@ class VideoGeneratorTest(unittest.TestCase):
   def test_generate_storyboard_step_audio_exists(
       self, mock_generate_audio_step, mock_create_storyboard_step
   ):
-    create_workdir_step.CreateWorkdirStep(self.context).process()
+    os.makedirs(self.context.workdir, exist_ok=True)
     audio_file_path = os.path.join(
         self.context.workdir, video_generator_execution.AUDIO_FILE_NAME
     )
@@ -123,7 +122,7 @@ class VideoGeneratorTest(unittest.TestCase):
   def test_generate_storyboard_step_audio_file_exists(
       self, mock_generate_audio_step, mock_create_storyboard_step
   ):
-    create_workdir_step.CreateWorkdirStep(self.context).process()
+    os.makedirs(self.context.workdir, exist_ok=True)
     audio_file_path = os.path.join(
         self.context.workdir, video_generator_execution.AUDIO_FILE_NAME
     )
@@ -146,7 +145,7 @@ class VideoGeneratorTest(unittest.TestCase):
   def test_generate_storyboard_step_audio_file_not_exist(
       self, mock_generate_audio_step, mock_create_storyboard_step
   ):
-    create_workdir_step.CreateWorkdirStep(self.context).process()
+    os.makedirs(self.context.workdir, exist_ok=True)
 
     sb = self.video_generator.generate_storyboard_step(self.context)
     mock_generate_audio_step.assert_called_once_with(
@@ -168,7 +167,7 @@ class VideoGeneratorTest(unittest.TestCase):
       mock_load_storyboard,
       mock_generate_video_step,
   ):
-    create_workdir_step.CreateWorkdirStep(self.context).process()
+    os.makedirs(self.context.workdir, exist_ok=True)
     storyboard_path = os.path.join(
         self.context.workdir, video_generator_execution.STORYBOARD_FILE_NAME
     )
@@ -191,7 +190,7 @@ class VideoGeneratorTest(unittest.TestCase):
       mock_generate_storyboard_step,
       mock_generate_video_step,
   ):
-    create_workdir_step.CreateWorkdirStep(self.context).process()
+    os.makedirs(self.context.workdir, exist_ok=True)
 
     self.video_generator.generate_video_step(self.context)
     mock_generate_storyboard_step.assert_called_once()
@@ -233,9 +232,6 @@ class VideoGeneratorTest(unittest.TestCase):
       ("language", "en-US"),
       ("multivoice", False),
       ("multitext", False),
-      ("sentiment", False),
-      ("video_overlay", False),
-      ("title", False),
       ("article_content", "this is my article content"),
   ])
   @mock.patch.object(vertexai, "init", autospec=True)

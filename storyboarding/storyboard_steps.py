@@ -10,6 +10,8 @@ import storyboarding
 from text import sentiment_analysis_step
 from vertexai import generative_models
 
+_GEMINI_MODEL = "gemini-2.0-flash-001"
+
 
 def _parse_srt_file(srt_file_path: str) -> tuple[list[str], int]:
   """Parses an SRT file and returns the contents & the last end time in seconds.
@@ -197,7 +199,7 @@ def _describe_images(image_file_paths: list[str]) -> str:
       xmin, ymax, xmax]
     - Focal Point Bounding Box: The rose petals and bud [ymin, xmin, ymax, xmax]
   """)
-  model = generative_models.GenerativeModel("gemini-1.5-pro-002")
+  model = generative_models.GenerativeModel(_GEMINI_MODEL)
   image_parts = ["Image List:"]
   for path in image_file_paths:
     image_parts.extend([path, generative_models.Image.load_from_file(path)])
@@ -291,7 +293,7 @@ def create_text_overlays(
     or y position.
   Ensure text is legible against the background image.
   """)
-  model = generative_models.GenerativeModel("gemini-2.0-flash")
+  model = generative_models.GenerativeModel(_GEMINI_MODEL)
   response_schema = {
       "type": "array",
       "items": {
@@ -540,7 +542,7 @@ def create_scenes(
     butterfly. The slide-right animation mimics the butterfly's movement, adding
     dynamism.
   """)
-  model = generative_models.GenerativeModel("gemini-1.5-pro-002")
+  model = generative_models.GenerativeModel(_GEMINI_MODEL)
   image_parts = ["Image List:", _describe_images(image_file_paths)]
   with open(srt_file_path, "r", encoding="utf-8") as srt_file:
     srt_parts = ["SRT Contents:", srt_file.read()]

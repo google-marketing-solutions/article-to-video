@@ -45,11 +45,15 @@ class GenerateVideoFromImagesStep:
     """
     clip = (
         mpy.ImageClip(scene.image_path, duration=duration)
-        .resize(width=self._target_resolution[0])
         .set_position("center")
         .set_fps(self._fps)
         .set_start(max(scene.start_time_seconds - 1, 0))
     )
+    if clip.w < clip.h:
+      clip = clip.resize(height=self._target_resolution[1])
+    else:
+      clip = clip.resize(width=self._target_resolution[0])
+
     animation_details = scene.animation.split("_")
     match animation_details[0]:
       case "zoom":

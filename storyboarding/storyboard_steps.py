@@ -379,12 +379,11 @@ def create_scenes(
     A list of Scenes
   """
 
-  extra_prompt = ""
-  if splash_image:
-    extra_prompt = textwrap.dedent(f"""\
-      8. If there is an image named "{splash_image}" and there's no other image
-      that fits well or better at the beginning, start the slideshow with
-      that splash image.""")
+  splash_prompt = textwrap.dedent(f"""\
+    9. If there is an image named "{splash_image}" and there's no other image
+    that fits well or better at the beginning, start the slideshow with
+    that splash image.""")
+  maybe_splash_prompt = splash_prompt if splash_image else ""
 
   task_for_prompt = textwrap.dedent(f"""\
     You are an expert slideshow creator with a keen eye for visual storytelling.
@@ -451,7 +450,36 @@ def create_scenes(
     Justify your animation choice in the output.
     7. If there are people in foreground of the image, ensure the
     Bounding Box and Focal Point includes all the faces in the foreground.
-    {extra_prompt}
+    8.  Extended Image Display and Animation Variety: After determining the
+    initial placement and start time for each image, calculate its intended
+    on-screen duration. This duration is determined by the start time of the
+    *next* scheduled image, or the end of the SRT file if it's the last image.**
+    **If an image's intended on-screen duration exceeds 30 seconds, you must
+    divide its display into multiple consecutive segments.**
+      - Each segment will use the **same image file path** and
+        **bounding boxes**.
+      - The total duration of these segments should equal the original intended
+        duration.
+      - Aim to divide the total duration into roughly equal segments, each **not
+        exceeding 30 seconds** (e.g., a 40-second duration becomes two 20-second
+        segments; a 70-second duration becomes three segments of approximately
+        23.3 seconds).**
+      - Crucially, assign a *different* animation from the supported list to
+        each segment of the same image to maintain visual interest.** For
+        instance, if `image1.jpg` is to be shown for 40 seconds, and its
+        original start time was `00:00:10,000`, it could be:
+        - `00:00:10,000 /path/to/image1.jpg` (Animation: zoom_in_slow)
+        - `00:00:30,000 /path/to/image1.jpg` (Animation: zoom_out_slow)
+      - To avoid abrupt cuts, try to pair animations together that are the
+        inverse of one another. For example, zoom_in_slow followed by
+        zoom_out_slow, or slide_left followed by slide_right.
+      - The start time for the first segment is its original calculated start
+        time. Subsequent segments for the same image start immediately after the
+        previous segment ends (i.e., the start time of the second segment is the
+        start time of the first segment plus the duration of the first segment).
+      - In your `Justification` for these split segments, explain the split and
+        the choice of sequential animations.
+    {maybe_splash_prompt}
 
     Example
 
@@ -490,12 +518,21 @@ def create_scenes(
     00:00:05,000 /path/to/image/garden.jpg
     - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
     - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
-    - Animation: pan_to_target_slow
+    - Animation: zoom_in_slow
     - Justification: This image aligns with the second subtitle about Mittens
-    playing in the garden. The slow pan suggests exploration of the garden
-    environment.
+    playing in the garden. The garden image is shown for 40 seconds
+    (until 00:00:45,000). This first 20-second segment uses a zoom_in_slow
+    animation to explore a part of the garden.
 
-    00:00:10,000 /path/to/image/butterfly.jpg
+    00:00:25,000 /path/to/image/garden.jpg
+    - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
+    - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
+    - Animation: zoom_out_slow
+    - Justification: This is the second 20-second segment for the garden image.
+    A zoom_out_slow animation is chosen to provide a different perspective of
+    the garden and maintain visual interest after the initial pan.
+
+    00:00:45,000 /path/to/image/butterfly.jpg
     - Main Subject Bounding Box: [ymin, xmin, ymax, xmax]
     - Focal Point Bounding Box: [ymin, xmin, ymax, xmax]
     - Animation: slide_right

@@ -122,7 +122,7 @@ class ScriptGenerator:
             "language": {"type": "string"},
             "default_voice": {
                 "type": "string",
-                "enum": VOICES.get(self.language, "en-US"),
+                "enum": self._voices,
             },
             "speakers": {
                 "type": "array",
@@ -132,7 +132,7 @@ class ScriptGenerator:
                         "persona": {"type": "string"},
                         "voice": {
                             "type": "string",
-                            "enum": VOICES.get(self.language, "en-US"),
+                            "enum": self._voices,
                         },
                     },
                 },
@@ -159,6 +159,17 @@ class ScriptGenerator:
             "text",
         ],
     }
+
+  @property
+  def language(self) -> pipeline.SupportedLanguage:
+    return self._language
+
+  @language.setter
+  def language(self, language: pipeline.SupportedLanguage) -> None:
+    if language not in VOICES:
+      raise ValueError(f"Language {language} not supported.")
+    self._voices = VOICES[language]
+    self._language = language
 
   def generate(
       self, source_text: str, output_file: str | None = None
@@ -210,7 +221,7 @@ class ScriptGenerator:
 
       Output:
       - Identify the speaker(s). For each speaker, describe their persona, and
-      choose a voice.
+      choose a voice. Valid voices are: {", ".join(self._voices)}.
       - Write the script. For each statement, identify the speaker by their
       voice and write the statement in a way befitting of their assigned
       persona.
@@ -233,6 +244,16 @@ class ScriptGenerator:
         ),
     )
     script = msgspec.json.decode(response.text, type=VoiceoverScript)
+
+    # Gemini sometimes returns voices that are not in the list of available
+    # voices. When this happens, fall back to a valid default option.
+    if script.default_voice not in self._voices:
+      script.default_voice = self._voices[0]
+
+    for statement in script.statements:
+      if statement.voice not in self._voices:
+        statement.voice = script.default_voice
+
     if output_file:
       with open(output_file, "w", encoding="utf-8") as file:
         json.dump(dataclasses.asdict(script), file, indent=2)

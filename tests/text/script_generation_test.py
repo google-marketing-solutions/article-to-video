@@ -31,6 +31,34 @@ _MULTI_VOICE_SCRIPT_JSON = """
 }
 """
 
+_MULTI_VOICE_SCRIPT_WITH_INVALID_VOICE_JSON = """
+{
+  "language": "en-US",
+  "default_voice": "en-US-Studio-O",
+  "speakers": [
+    {
+    "persona": "Lead Anchor",
+    "voice": "en-US-Studio-O"
+    },
+    {
+    "persona": "Second Anchor",
+    "voice": "en-US-Studio-Q"
+    }
+  ],
+  "statements": [
+    {
+    "voice": "en-US-Studio-O",
+    "text": "first statement"
+    },
+    {
+    "voice": "invalid-voice-code",
+    "text": "second statement with invalid voice"
+    }
+  ],
+  "text": "first statement second statement with invalid voice"
+}
+"""
+
 
 class ScriptGenerationTest(unittest.TestCase):
 
@@ -68,6 +96,43 @@ class ScriptGenerationTest(unittest.TestCase):
         ),
     )
 
+  def test_generate_corrects_invalid_voice_to_default(self):
+    mock_llm = mock.MagicMock(spec=genai.GenerativeModel)
+    mock_llm.generate_content.return_value.text = (
+        _MULTI_VOICE_SCRIPT_WITH_INVALID_VOICE_JSON
+    )
+    script_generator = text.ScriptGenerator(
+        speakers=2, language="en-US", llm=mock_llm
+    )
+
+    script = script_generator.generate("source_text")
+
+    self.assertEqual(
+        script,
+        text.VoiceoverScript(
+            language="en-US",
+            default_voice="en-US-Studio-O",
+            speakers=[
+                text.VoiceoverSpeaker(
+                    persona="Lead Anchor", voice="en-US-Studio-O"
+                ),
+                text.VoiceoverSpeaker(
+                    persona="Second Anchor", voice="en-US-Studio-Q"
+                ),
+            ],
+            statements=[
+                text.VoiceoverStatement(
+                    voice="en-US-Studio-O", text="first statement"
+                ),
+                text.VoiceoverStatement(  # Voice should be corrected to default
+                    voice="en-US-Studio-O",
+                    text="second statement with invalid voice",
+                ),
+            ],
+            text="first statement second statement with invalid voice",
+        ),
+    )
+
   def test_generate_prompts_llm_correctly(self):
     mock_llm = mock.MagicMock(spec=genai.GenerativeModel)
     mock_llm.generate_content.return_value.text = _MULTI_VOICE_SCRIPT_JSON
@@ -93,14 +158,14 @@ class ScriptGenerationTest(unittest.TestCase):
         " should take turns when talking and the switch over should be\nvery"
         " natural while sounding professional. Add some enthusiasm\nbut"
         " maintain professionalism.\n\nOutput:\n- Identify the speaker(s). For"
-        " each speaker, describe their persona, and\nchoose a voice.\n- Write"
-        " the script. For each statement, identify the speaker by their\nvoice"
-        " and write the statement in a way befitting of their"
-        " assigned\npersona.\n- Include the complete, combined, transcipt of"
-        " the narration. Each\nspeaker's turn should start a new paragraph.\n-"
-        " Generate the script in the language: en-US.\n\nAdditional"
-        " instructions:\n- Don't add quotes or slashes within the"
-        " output.\n\n\nThis is the article:\nsource_text\n",
+        " each speaker, describe their persona, and\nchoose a voice. Valid"
+        " voices are: en-US-Studio-O, en-US-Studio-Q.\n- Write the script. For"
+        " each statement, identify the speaker by their\nvoice and write the"
+        " statement in a way befitting of their assigned\npersona.\n- Include"
+        " the complete, combined, transcipt of the narration. Each\nspeaker's"
+        " turn should start a new paragraph.\n- Generate the script in the"
+        " language: en-US.\n\nAdditional instructions:\n- Don't add quotes or"
+        " slashes within the output.\n\n\nThis is the article:\nsource_text\n",
         generation_config=mock.ANY,
     )
 

@@ -86,6 +86,46 @@ def upload_file(video_id: str):
   return flask.jsonify({'file': image_file})
 
 
+def _get_bool_from_request(
+    d: dict[str, str], key: str, default: bool | None = None
+) -> bool | None:
+  """Safely retrieves and converts a value from a dictionary to a boolean.
+
+  This function attempts to get a value associated with the given key from the
+  dictionary.
+  - If the key is not found, it returns the `default` value.
+  - If the value is already a boolean, it's returned directly.
+  - If the value is a string, it's converted to a boolean:
+    - true values (case-insensitive): 'true', 't', 'yes', 'y', 'on', '1'.
+    - false values (case-insensitive): 'false', 'f', 'no', 'n', 'off', '0'.
+  - If the value is a string that cannot be converted, or if it's of any other
+    type, the `default` value is returned.
+
+  Args:
+    d: The dictionary to look up the key in.
+    key: The key whose value is to be retrieved and converted.
+    default: The default boolean value to return if the key is not found or if
+      the value cannot be converted to a boolean. Defaults to None.
+
+  Returns:
+    The boolean representation of the value, or the default value.
+  """
+  if key not in d:
+    return default
+
+  val = d[key]
+  if isinstance(val, bool):
+    return val
+  elif isinstance(val, str):
+    s_lower = val.lower().strip()
+    if s_lower in ('true', 't', 'yes', 'y', 'on', '1'):
+      return True
+    elif s_lower in ('false', 'f', 'no', 'n', 'off', '0'):
+      return False
+  else:
+    return default
+
+
 @app.route('/video/<video_id>/generate', methods=['POST'])
 def generate_video(video_id: str):
   """Generates a video with given inputs.
@@ -112,39 +152,68 @@ def generate_video(video_id: str):
       JSON with the path to the file generated.
   """
   request_params = dict(flask.request.form)
-  print(request_params)
+  logging.log(logging.INFO, 'Raw request parameters: %s', request_params)
 
   image_paths = []
   file_storage = flask.request.files.values()
   for file in file_storage:
     extension = file.filename.rsplit('.', 1)[1].lower()
-    if extension not in ALLOWED_EXTENSIONS:
+    if extension in ALLOWED_EXTENSIONS:
+      folder = f'uploads/{video_id}/images'
+      os.makedirs(folder, exist_ok=True)
+      upload_path = os.path.join(folder, file.filename)
+      file.save(upload_path)
+      image_paths.append(upload_path)
+    else:
       logging.log(
-          logging.INFO, 'Skipping unsupported file extnsion: %s', extension
+          logging.INFO,
+          '%s does not have a supported image extension.',
+          file.filename,
       )
-      continue
 
-    folder = f'uploads/{video_id}/images'
+  # if no images were includes in the request, check if any were already
+  # uploaded with upload_file
+  if not image_paths:
+    image_paths = glob.glob(f'uploads/{video_id}/images/*')
 
-    os.makedirs(folder, exist_ok=True)
-    upload_path = os.path.join(folder, file.filename)
-    file.save(upload_path)
-    image_paths.append(upload_path)
+  if 'article_content' in flask.request.files:
+    article_bytes = flask.request.files['article_content'].read()
+    article_content = article_bytes.decode('utf-8')
+  elif 'article_content' in request_params:
+    article_content = request_params['article_content']
+  else:
+    article_content = None
+
+  if not article_content or not image_paths:
+    error_msg = 'Article content or images not found.'
+    logging.log(logging.ERROR, 'Error: %s', error_msg)
+    return flask.jsonify({'status': error_msg})
+
+  parsed_request_params = {
+      'article_content': article_content,
+      'image_paths': image_paths,
+      'splash_image': request_params.get('splash_image'),
+      'multivoice': _get_bool_from_request(request_params, 'multivoice'),
+      'disable_text_overlays': _get_bool_from_request(
+          request_params, 'disable_text_overlays'
+      ),
+      'burn_in_subtitles': _get_bool_from_request(
+          request_params, 'burn_in_subtitles'
+      ),
+      'language': request_params.get('language'),
+      'multitext': _get_bool_from_request(request_params, 'multitext'),
+  }
+  logging.log(
+      logging.INFO, 'Parsed request parameters: %s', parsed_request_params
+  )
 
   try:
-    if 'article_content' in flask.request.files:
-      article_bytes = flask.request.files['article_content'].read()
-      request_params['article_content'] = article_bytes.decode('utf-8')
-    request_params['image_paths'] = image_paths or glob.glob(
-        f'uploads/{video_id}/images/*'
-    )
-
     # In a production-ready solution, the video generation process would
     # typically be handled by a separate, asynchronous worker process or a
     # managed service  keep the main application responsive. For simplicity in
     # this demo, it's handled synchronously.
     context = pipeline.VideoGenerationContext.from_request(
-        config, request_params, video_id
+        config, parsed_request_params, video_id
     )
     video_path = video_generator_execution.VideoGenerator().generate_video_step(
         context

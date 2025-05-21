@@ -589,8 +589,27 @@ def create_scenes(
           response_mime_type="application/json",
       ),
   )
-  scene_list_json = json.loads(response.text)
-  return [storyboarding.Scene(**j) for j in scene_list_json]
+
+  scenes = msgspec.json.decode(response.text, type=list[storyboarding.Scene])
+
+  # Gemini occasionally returns duplicate start times which moviepy cannot
+  # handle. We don't know enough about the images to reschedule them so we
+  # remove any duplicates to be safe.
+  scenes_with_deduped_start_times = []
+  scene_start_times = set()
+  for scene in scenes:
+    if scene.start_time not in scene_start_times:
+      scene_start_times.add(scene.start_time)
+      scenes_with_deduped_start_times.append(scene)
+  # sorting the strings alphabetically works since the timestamp format pads
+  # numbers with leading zeros.
+  scenes_with_deduped_start_times = sorted(
+      scenes_with_deduped_start_times, key=lambda x: x.start_time
+  )
+
+  # Ensure the first scene starts at time 00:00
+  scenes_with_deduped_start_times[0].start_time = "00:00:00,000"
+  return scenes_with_deduped_start_times
 
 
 def create_storyboard_step(

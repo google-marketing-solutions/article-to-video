@@ -186,3 +186,171 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
       )
 
     self.assertEqual(text_overlays, _TEXT_OVERLAYS)
+
+  @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
+  @mock.patch.object(
+      generative_models.GenerativeModel, "generate_content", autospec=True
+  )
+  def test_create_scenes_first_scene_starts_at_zero(
+      self, mock_generate_content, _
+  ):
+    with mock.patch.object(
+        builtins, "open", new_callable=mock.mock_open, read_data="srt content"
+    ):
+      # Mock the LLM response: first scene does NOT start at 00:00:00,000
+      mock_generate_content.return_value.text = textwrap.dedent("""\
+        [
+            {"image_path": "image/path/1",
+            "start_time": "00:00:05,000",
+            "focal_point": [0,0,1000,500],
+            "main_subject": [0,0,1000,1000]},
+            {"image_path": "image/path/2",
+            "start_time": "00:00:23,000",
+            "focal_point": [250,0,1000,500],
+            "main_subject": [0,250,1000,1000]}
+        ]""")
+
+      scenes = storyboarding.create_scenes(
+          ["image/path/1", "image/path/2"], "srt_path"
+      )
+
+      expected_scenes = [
+          storyboarding.Scene(
+              image_path="image/path/1",
+              start_time="00:00:00,000",  # corrected
+              focal_point=[0, 0, 1000, 500],
+              main_subject=[0, 0, 1000, 1000],
+          ),
+          storyboarding.Scene(
+              image_path="image/path/2",
+              start_time="00:00:23,000",
+              focal_point=[250, 0, 1000, 500],
+              main_subject=[0, 250, 1000, 1000],
+          ),
+      ]
+      self.assertEqual(scenes, expected_scenes)
+      self.assertEqual(scenes[0].start_time, "00:00:00,000")
+
+  @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
+  @mock.patch.object(
+      generative_models.GenerativeModel, "generate_content", autospec=True
+  )
+  def test_create_scenes_deduplicates_start_times(
+      self, mock_generate_content, _
+  ):
+    with mock.patch.object(
+        builtins, "open", new_callable=mock.mock_open, read_data="srt content"
+    ):
+      # Mock LLM response with duplicate start times
+      mock_generate_content.return_value.text = textwrap.dedent("""\
+        [
+            {"image_path": "image/path/1",
+            "start_time": "00:00:00,000",
+            "focal_point": [0,0,1000,500],
+            "main_subject": [0,0,1000,1000]},
+            {"image_path": "image/path/duplicate",
+            "start_time": "00:00:05,000",
+            "focal_point": [0,0,100,100],
+            "main_subject": [0,0,200,200]},
+            {"image_path": "image/path/2",
+            "start_time": "00:00:05,000",
+            "focal_point": [250,0,1000,500],
+            "main_subject": [0,250,1000,1000]}
+        ]""")
+
+      scenes = storyboarding.create_scenes(
+          ["image/path/1", "image/path/duplicate", "image/path/2"], "srt_path"
+      )
+
+      # Expecting the second scene with "00:00:05,000" to be dropped
+      expected_scenes = [
+          storyboarding.Scene(
+              image_path="image/path/1",
+              start_time="00:00:00,000",
+              focal_point=[0, 0, 1000, 500],
+              main_subject=[0, 0, 1000, 1000],
+          ),
+          storyboarding.Scene(
+              image_path="image/path/duplicate",
+              start_time="00:00:05,000",
+              focal_point=[0, 0, 100, 100],
+              main_subject=[0, 0, 200, 200],
+          ),
+      ]
+      self.assertEqual(scenes, expected_scenes)
+      # Verify no duplicate start times
+      start_times = [scene.start_time for scene in scenes]
+      self.assertEqual(len(start_times), len(set(start_times)))
+
+  @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
+  @mock.patch.object(
+      generative_models.GenerativeModel, "generate_content", autospec=True
+  )
+  def test_create_scenes_sorts(self, mock_generate_content, _):
+    with mock.patch.object(
+        builtins, "open", new_callable=mock.mock_open, read_data="srt content"
+    ):
+      # Mock LLM response with out-of-order start times
+      mock_generate_content.return_value.text = textwrap.dedent("""\
+        [
+            {"image_path": "image/path/two",
+            "start_time": "00:00:15,000",
+            "focal_point": [0,0,100,100],
+            "main_subject": [0,0,200,200]},
+            {"image_path": "image/path/zero",
+            "start_time": "00:00:00,000",
+            "focal_point": [0,0,1000,500],
+            "main_subject": [0,0,1000,1000]},
+            {"image_path": "image/path/three",
+            "start_time": "00:00:20,000",
+            "focal_point": [1,1,1,1],
+            "main_subject": [2,2,2,2]},
+            {"image_path": "image/path/one",
+            "start_time": "00:00:10,000",
+            "focal_point": [250,0,1000,500],
+            "main_subject": [0,250,1000,1000]}
+        ]""")
+
+      scenes = storyboarding.create_scenes(
+          [
+              "image/path/late",
+              "image/path/early",
+              "image/path/duplicate_late",
+              "image/path/middle",
+          ],
+          "srt_path",
+      )
+
+      expected_scenes = [
+          storyboarding.Scene(
+              image_path="image/path/zero",
+              start_time="00:00:00,000",
+              focal_point=[0, 0, 1000, 500],
+              main_subject=[0, 0, 1000, 1000],
+          ),
+          storyboarding.Scene(
+              image_path="image/path/one",
+              start_time="00:00:10,000",
+              focal_point=[250, 0, 1000, 500],
+              main_subject=[0, 250, 1000, 1000],
+          ),
+          storyboarding.Scene(
+              image_path="image/path/two",
+              start_time="00:00:15,000",
+              focal_point=[0, 0, 100, 100],
+              main_subject=[0, 0, 200, 200],
+          ),
+          storyboarding.Scene(
+              image_path="image/path/three",
+              start_time="00:00:20,000",
+              focal_point=[1, 1, 1, 1],
+              main_subject=[2, 2, 2, 2],
+          ),
+      ]
+      self.assertEqual(scenes, expected_scenes)
+      self.assertTrue(
+          all(
+              scenes[i].start_time <= scenes[i + 1].start_time
+              for i in range(len(scenes) - 1)
+          )
+      )

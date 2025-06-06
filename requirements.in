@@ -27,3 +27,4 @@ prometheus-client
 smart-open
 virtualenv
 memray
+h11>=0.16.0

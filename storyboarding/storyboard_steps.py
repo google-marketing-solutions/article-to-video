@@ -10,9 +10,7 @@ import storyboarding
 from text import sentiment_analysis_step
 from vertexai import generative_models
 
-_GEMINI_MODEL = "gemini-2.0-flash-001"
-
-_TEXT_OVERLAY_GEMINI_MODEL = "gemini-2.5-flash-preview-05-20"
+_GEMINI_MODEL = "gemini-2.5-flash"
 
 
 def _parse_srt_file(srt_file_path: str) -> tuple[list[str], int]:
@@ -295,7 +293,7 @@ def create_text_overlays(
     or y position.
   Ensure text is legible against the background image.
   """)
-  model = generative_models.GenerativeModel(_TEXT_OVERLAY_GEMINI_MODEL)
+  model = generative_models.GenerativeModel(_GEMINI_MODEL)
   response_schema = {
       "type": "array",
       "items": {

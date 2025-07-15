@@ -18,7 +18,7 @@ parameterized
 msgspec
 ray==2.33.0
 tensorflow-io-gcs-filesystem==0.37.1
-aiohttp==3.11.12
+aiohttp==3.12.14
 aiohttp-cors
 colorful
 py-spy

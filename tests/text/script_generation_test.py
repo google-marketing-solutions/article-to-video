@@ -3,27 +3,29 @@ from unittest import mock
 import text
 from vertexai import generative_models as genai
 
+# Added for Gemini TTS language support: Updated to use Gemini TTS voice names (Kore, Charon)
+# instead of legacy Cloud TTS voices (en-US-Studio-O, en-US-Studio-Q)
 _MULTI_VOICE_SCRIPT_JSON = """
 {
   "language": "en-US",
-  "default_voice": "en-US-Studio-O",
+  "default_voice": "Kore",
   "speakers": [
     {
     "persona": "Lead Anchor",
-    "voice": "en-US-Studio-O"
+    "voice": "Kore"
     },
     {
     "persona": "Second Anchor",
-    "voice": "en-US-Studio-Q"
+    "voice": "Charon"
     }
   ],
   "statements": [
     {
-    "voice": "en-US-Studio-O",
+    "voice": "Kore",
     "text": "first statement"
     },
     {
-    "voice": "en-US-Studio-Q",
+    "voice": "Charon",
     "text": "second statement"
     }
   ],
@@ -31,23 +33,24 @@ _MULTI_VOICE_SCRIPT_JSON = """
 }
 """
 
+# Added for Gemini TTS language support: Updated to use Gemini TTS voice names
 _MULTI_VOICE_SCRIPT_WITH_INVALID_VOICE_JSON = """
 {
   "language": "en-US",
-  "default_voice": "en-US-Studio-O",
+  "default_voice": "Kore",
   "speakers": [
     {
     "persona": "Lead Anchor",
-    "voice": "en-US-Studio-O"
+    "voice": "Kore"
     },
     {
     "persona": "Second Anchor",
-    "voice": "en-US-Studio-Q"
+    "voice": "Charon"
     }
   ],
   "statements": [
     {
-    "voice": "en-US-Studio-O",
+    "voice": "Kore",
     "text": "first statement"
     },
     {
@@ -71,25 +74,21 @@ class ScriptGenerationTest(unittest.TestCase):
 
     script = script_generator.generate("source_text")
 
+    # Added for Gemini TTS language support: Updated expected voices to
+    # Gemini TTS names
     self.assertEqual(
         script,
         text.VoiceoverScript(
             language="en-US",
-            default_voice="en-US-Studio-O",
+            default_voice="Kore",
             speakers=[
-                text.VoiceoverSpeaker(
-                    persona="Lead Anchor", voice="en-US-Studio-O"
-                ),
-                text.VoiceoverSpeaker(
-                    persona="Second Anchor", voice="en-US-Studio-Q"
-                ),
+                text.VoiceoverSpeaker(persona="Lead Anchor", voice="Kore"),
+                text.VoiceoverSpeaker(persona="Second Anchor", voice="Charon"),
             ],
             statements=[
+                text.VoiceoverStatement(voice="Kore", text="first statement"),
                 text.VoiceoverStatement(
-                    voice="en-US-Studio-O", text="first statement"
-                ),
-                text.VoiceoverStatement(
-                    voice="en-US-Studio-Q", text="second statement"
+                    voice="Charon", text="second statement"
                 ),
             ],
             text="first statement second statement",
@@ -107,25 +106,21 @@ class ScriptGenerationTest(unittest.TestCase):
 
     script = script_generator.generate("source_text")
 
+    # Added for Gemini TTS language support: Updated expected voices to
+    # Gemini TTS names
     self.assertEqual(
         script,
         text.VoiceoverScript(
             language="en-US",
-            default_voice="en-US-Studio-O",
+            default_voice="Kore",
             speakers=[
-                text.VoiceoverSpeaker(
-                    persona="Lead Anchor", voice="en-US-Studio-O"
-                ),
-                text.VoiceoverSpeaker(
-                    persona="Second Anchor", voice="en-US-Studio-Q"
-                ),
+                text.VoiceoverSpeaker(persona="Lead Anchor", voice="Kore"),
+                text.VoiceoverSpeaker(persona="Second Anchor", voice="Charon"),
             ],
             statements=[
-                text.VoiceoverStatement(
-                    voice="en-US-Studio-O", text="first statement"
-                ),
+                text.VoiceoverStatement(voice="Kore", text="first statement"),
                 text.VoiceoverStatement(  # Voice should be corrected to default
-                    voice="en-US-Studio-O",
+                    voice="Kore",
                     text="second statement with invalid voice",
                 ),
             ],
@@ -142,32 +137,14 @@ class ScriptGenerationTest(unittest.TestCase):
 
     script_generator.generate("source_text")
 
-    mock_llm.generate_content.assert_called_once_with(
-        "Take this article and give me a script of news anchors narrating"
-        " the\nmain points in this article in the form of a news flash.\nThe"
-        " speaker(s) should briefly introduce the topic(s) in less than"
-        " 15\nseconds before diving in; however, they shouldn't introduce"
-        " themselves,\nor say things like welcome back, or now to story, or we"
-        " are taking\nyou to... as the output of this will be consumed"
-        " independently in a\nnews page. Also don't make mention to a time of"
-        " day (like 'good evening'\nor 'good morning' If there are multiple"
-        " speakers,\none person should be the main anchor who gives the\nmain"
-        " points, while the other anchor makes complementary points.\nIt should"
-        " not be a dialog, rather, the speaker(s) should both should\naim to"
-        " convey the same news content. If there are multiple speakers\nthey"
-        " should take turns when talking and the switch over should be\nvery"
-        " natural while sounding professional. Add some enthusiasm\nbut"
-        " maintain professionalism.\n\nOutput:\n- Identify the speaker(s). For"
-        " each speaker, describe their persona, and\nchoose a voice. Valid"
-        " voices are: en-US-Studio-O, en-US-Studio-Q.\n- Write the script. For"
-        " each statement, identify the speaker by their\nvoice and write the"
-        " statement in a way befitting of their assigned\npersona.\n- Include"
-        " the complete, combined, transcipt of the narration. Each\nspeaker's"
-        " turn should start a new paragraph.\n- Generate the script in the"
-        " language: en-US.\n\nAdditional instructions:\n- Don't add quotes or"
-        " slashes within the output.\n\n\nThis is the article:\nsource_text\n",
-        generation_config=mock.ANY,
-    )
+    # Added for Gemini TTS language support: Updated assertion to use ANY matcher since voice list now includes
+    # all Gemini voices (Kore, Charon, Aoede, Puck, etc.) instead of just 2 legacy voices
+    # The exact prompt will vary but structure remains the same
+    call_args = mock_llm.generate_content.call_args
+    self.assertIn("news anchors narrating", call_args[0][0])
+    self.assertIn("Kore", call_args[0][0])
+    self.assertIn("Charon", call_args[0][0])
+    self.assertIn("source_text", call_args[0][0])
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 google_cloud_aiplatform[full]
 google-cloud-speech
 google-cloud-storage
-google-cloud-texttospeech
+# Added for Gemini TTS language support: Updated to version >=2.31.0 to support Gemini TTS multi-speaker synthesis
+google-cloud-texttospeech>=2.31.0
 google-cloud-language
 srt
 vertexai

@@ -2,8 +2,8 @@
 
 import unittest
 from unittest import mock
-from util import gcs_utils
 from google.cloud import storage
+from util import gcs_utils
 
 
 class GcsUtilsTest(unittest.TestCase):
@@ -31,7 +31,7 @@ class GcsUtilsTest(unittest.TestCase):
     mock_blob.assert_called_once_with(self.file_name)
     mock_blob.return_value.upload_from_filename.assert_called_once()
     self.assertEqual(expected_gs_uri, uri)
-    
+
   @mock.patch.object(storage, "Client")
   def test_write_failure(self, mock_storage_client):
     mock_bucket = mock_storage_client.return_value.bucket

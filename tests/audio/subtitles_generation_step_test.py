@@ -129,13 +129,15 @@ class SubtitlesGenerationStepTest(unittest.TestCase):
     for data in words_data:
       word_info = speech_v1.types.WordInfo()
 
-      # Calculate total seconds (including nanoseconds fraction) for start time
+      # Calculate total seconds (including nanoseconds fraction) for
+      # start time
       start_total_seconds = data["start_time"]["seconds"] + (
           data["start_time"]["nanos"] / 1_000_000_000.0
       )
       word_info.start_time = datetime.timedelta(seconds=start_total_seconds)
 
-      # Calculate total seconds (including nanoseconds fraction) for end time
+      # Calculate total seconds (including nanoseconds fraction) for end
+      # time
       end_total_seconds = data["end_time"]["seconds"] + (
           data["end_time"]["nanos"] / 1_000_000_000.0
       )

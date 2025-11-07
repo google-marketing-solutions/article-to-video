@@ -46,7 +46,8 @@ class CreateFinalAudioStep:
   def _adjust_audio_clips(
       self, main_audio: mpy.AudioFileClip, background_audio: mpy.AudioFileClip
   ) -> mpy.CompositeAudioClip:
-    # Adjust narration audio to be louder and add in a buffer for audio fade out
+    # Adjust narration audio to be louder and add in a buffer for audio
+    # fade out
     narration_audio_length = int(
         math.ceil(main_audio.duration) + self._FADE_OUT_DURATION
     )

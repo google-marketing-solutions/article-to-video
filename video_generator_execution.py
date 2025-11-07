@@ -19,6 +19,12 @@ This is a standalone script which takes as input an article text in .txt
  format and pictures (each with the same prefix plus a number starting from 0).
 It will generate a video out of the concatenated images and text summarization,
  along with narrated audio and srt subtitles.
+
+Added for Gemini TTS language support: Updated to use Gemini 2.5 Pro TTS which
+supports 83 languages
+(24 GA + 59 Preview). Language choices are dynamically loaded from
+pipeline.SUPPORTED_LANGUAGES.
+
 Typical usage example:
 """
 
@@ -410,7 +416,8 @@ def _get_config(config_file_name: str) -> dict[str, str]:
 
 
 def _get_image_paths(image_dir: str) -> list[str]:
-  image_extensions = (".jpg", ".jpeg", ".png", ".gif", ".bmp")
+  # Fix: Add .webp support for modern image formats
+  image_extensions = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp")
   if not image_dir.endswith(os.path.sep):
     image_dir += os.path.sep
   image_files = []

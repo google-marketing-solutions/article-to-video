@@ -65,39 +65,33 @@ def load_script(script_path: str) -> VoiceoverScript:
         f" {script_path}: {e}"
     ) from e
 
+GEMINI_VOICES = [
+    "Kore",  # Female
+    "Charon",  # Male
+    "Aoede",  # Female
+    "Puck",  # Male
+    "Fenrir",  # Male
+    "Leda",  # Female
+    "Zephyr",  # Female
+    "Orus",  # Male
+]
 
-VOICES = {
-    # English (US)
-    "en-US": [
-        "en-US-Studio-O",
-        "en-US-Studio-Q",
-    ],
-    # English (UK)
-    "en-GB": [
-        "en-GB-Studio-B",
-        "en-GB-Studio-C",
-    ],
-    # French
-    "fr-FR": [
-        "fr-FR-Studio-A",
-        "fr-FR-Studio-D",
-    ],
-    # German
-    "de-DE": [
-        "de-DE-Studio-B",
-        "de-DE-Studio-C",
-    ],
-    # Spanish (Spain)
-    "es-ES": [
-        "es-ES-Studio-C",
-        "es-ES-Studio-F",
-    ],
-    # Portuguese (Brazilian)
-    "pt-BR": [
-        "pt-BR-Neural2-B",
-        "pt-BR-Neural2-C",
-    ],
-}
+# Mapping for backward compatibility - all languages use the same Gemini voices
+# Added for Gemini TTS language support: This allows any language to use
+# any of the Gemini voices
+
+
+def get_voices_for_language(language: str) -> list[str]:
+  """Returns available Gemini voices for any language.
+
+  Args:
+    language: Language code (e.g., 'en-US', 'fr-FR', 'ja-JP')
+
+  Returns:
+    List of voice names compatible with Gemini TTS
+  """
+  # All Gemini voices work with all languages
+  return GEMINI_VOICES
 
 
 class ScriptGenerator:
@@ -166,9 +160,10 @@ class ScriptGenerator:
 
   @language.setter
   def language(self, language: pipeline.SupportedLanguage) -> None:
-    if language not in VOICES:
-      raise ValueError(f"Language {language} not supported.")
-    self._voices = VOICES[language]
+    # Added for Gemini TTS language support: Updated to use get_voices_for_language which works with all Gemini TTS languages
+    # No validation needed as Gemini voices work with all supported
+    # languages
+    self._voices = get_voices_for_language(language)
     self._language = language
 
   def generate(

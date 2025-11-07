@@ -3,9 +3,17 @@
 ## Solution Description
 This is a Python-based solution that processes customer-provided text and image
 inputs to convert them into short-form video formats. It generates an AI summary
-from the provided text content, an audio track from the summary, and finally
-produces a video file (.mp4) that is a concatenation of the provided images with
-some visual effects and the audio track as voiceover.
+from the provided text content, an audio track from the summary using Gemini 2.5
+Pro TTS, and finally produces a video file (.mp4) that is a concatenation of the
+provided images with some visual effects and the audio track as voiceover.
+
+**Key Features:**
+* **83 Language Support** - Gemini TTS supports 24 GA languages and 59 Preview
+  languages
+* **Natural Multi-Speaker Audio** - Up to 8 universal voices (Kore, Charon,
+  Aoede, Puck, Fenrir, Leda, Zephyr, Orus)
+* **High Quality Audio** - 24kHz LINEAR16 audio output
+* **Modern Image Format Support** - Supports WEBP, JPEG, PNG, GIF, and BMP
 
 This solution is still under development and should be considered experimental.
 
@@ -19,6 +27,8 @@ Try Article to Video in Colab!
 * Google Cloud project with Google Cloud Storage, Vertex AI, and Text-to-Speech
   enabled APIs.
 * Valid article + related images to convert to a video.
+* Python 3.12 or higher recommended.
+* google-cloud-texttospeech >= 2.31.0 (for Gemini TTS support)
 
 ## Environment setup
 * Install the requirement.txt libraries.
@@ -34,7 +44,7 @@ Try Article to Video in Colab!
 
 ```bash
 usage: video_generator_execution.py [-h] [--config CONFIG] [--video_id VIDEO_ID] --article_path ARTICLE_PATH --image_dir IMAGE_DIR [--disable_text_overlays]
-                                    [--multi_text] [--splash_image SPLASH_IMAGE] [--burn_in_subtitles] [--language {en-US,en-GB,fr-FR,de-DE,es-ES,pt-BR}] [--step {audio,storyboard,video}] [--debug]
+                                    [--multi_text] [--splash_image SPLASH_IMAGE] [--burn_in_subtitles] [--language LANGUAGE] [--step {audio,storyboard,video}] [--debug]
 
 options:
   -h, --help            show this help message and exit
@@ -56,8 +66,12 @@ options:
   --disable_text_overlays
                         Disables text overlay generation.
   --burn_in_subtitles   When provided, subtitles will be burned into the content.
-  --language {en-US,en-GB,fr-FR,de-DE,es-ES,pt-BR}, -l {en-US,en-GB,fr-FR,de-DE,es-ES,pt-BR}
-                        The language for the output video. Defaults to 'en-US'.
+  --language LANGUAGE, -l LANGUAGE
+                        The language for the output video. Supports 83 languages via Gemini TTS.
+                        Popular options: en-US, en-GB, es-ES, fr-FR, de-DE, pt-BR, ja-JP, ko-KR, 
+                        zh-CN, ar-EG, hi-IN, it-IT, nl-NL, pl-PL, ru-RU, tr-TR, and many more.
+                        See pipeline/video_generation_context.py for the complete list.
+                        Defaults to 'en-US'.
   --step {audio,storyboard,video}
                         Run a discrete step in the video generation flow.
   --debug, -d           Enable debug logging.
@@ -67,12 +81,18 @@ To generate a video:
 
 1. Save article contents a text file.
 2. Put images into one directory (supported extensions are .jpg, .jpeg, .png,
-.gif, .bmp)
+.gif, .bmp, .webp)
 3. Provide a human readable video ID (you can also omit this and a UUID will
 be generated for the video instead).
 3. Run:
 ```bash
 python video_generator_execution.py --article_path path/to/article.txt --image_dir path/to/images/dir --video_id id_for_your_video
+```
+
+For multi-speaker narration (conversational style with 2 voices), add the
+`--multi_voice` flag:
+```bash
+python video_generator_execution.py --article_path path/to/article.txt --image_dir path/to/images/dir --video_id id_for_your_video --multi_voice
 ```
 
 The video and any other generated assets will be available in the output
@@ -131,6 +151,40 @@ command:
 ```
 pip-compile requirements.in --generate-hashes --upgrade
 ```
+
+**Note:** The solution requires `google-cloud-texttospeech >= 2.31.0` for Gemini
+TTS multi-speaker synthesis support.
+
+## Language Support
+
+This solution uses Gemini 2.5 Pro TTS which supports 83 languages:
+
+**Generally Available (GA) - 24 Languages:**
+Arabic (Egypt), Bangla (Bangladesh), Dutch (Netherlands), English (India/US),
+French (France), German (Germany), Hindi (India), Indonesian (Indonesia),
+Italian (Italy), Japanese (Japan), Korean (South Korea), Marathi (India),
+Polish (Poland), Portuguese (Brazil), Romanian (Romania), Russian (Russia),
+Spanish (Spain), Tamil (India), Telugu (India), Thai (Thailand), Turkish
+(Turkey), Ukrainian (Ukraine), Vietnamese (Vietnam)
+
+**Preview - 59 Additional Languages:**
+Including Afrikaans, Albanian, Amharic, Armenian, Azerbaijani, Basque,
+Belarusian, Bulgarian, Burmese, Catalan, Chinese (Mandarin), Croatian, Czech,
+Danish, Estonian, Filipino, Finnish, Galician, Georgian, Greek, Gujarati,
+Hebrew, Hungarian, Icelandic, Javanese, Kannada, and many more.
+
+For the complete list, see `pipeline/video_generation_context.py` or the
+[Gemini TTS documentation](https://cloud.google.com/text-to-speech/docs/gemini-tts#available_languages).
+
+## Migration Notes
+
+This solution has been migrated from the legacy Cloud Text-to-Speech API to
+Gemini 2.5 Pro TTS. See `CHANGES.md` for detailed migration documentation
+including:
+* API changes and improvements
+* Language expansion (6 → 83 languages)
+* Voice updates (8 universal voices)
+* Bug fixes and enhancements
 
 # Disclaimer:
 Copyright 2025 Google LLC. This solution, including any related sample code or

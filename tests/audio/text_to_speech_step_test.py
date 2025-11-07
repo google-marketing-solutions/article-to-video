@@ -39,7 +39,9 @@ class TextToSpeechStepTest(unittest.TestCase):
 
   @mock.patch("audio.text_to_speech_step.texttospeech.TextToSpeechClient")
   def test_creates_audio_file(self, mock_text_to_speech_client, _):
-    """Test that single-voice audio is generated and saved correctly."""
+    """Test that multi-speaker audio is generated with Gemini TTS."""
+    # Added for Gemini TTS language support: Updated test to reflect Gemini
+    # TTS multi-speaker synthesis
     step = text_to_speech_step.TextToSpeechStep(self.context)
     mock_client = mock_text_to_speech_client.return_value
     mock_client.synthesize_speech.return_value.audio_content = (
@@ -48,15 +50,26 @@ class TextToSpeechStepTest(unittest.TestCase):
 
     mock_open = mock.mock_open()
     with mock.patch("builtins.open", mock_open) as mocked_file:
-      step.process(
-          text.VoiceoverScript(
-              "language",
-              "voice",
-              [],
-              [],
-              "script_text",
-          )
+      # Added for Gemini TTS language support: Create a script with
+      # speakers for Gemini TTS multi-speaker
+      script = text.VoiceoverScript(
+          language="en-US",
+          default_voice="Kore",
+          speakers=[
+              text.VoiceoverSpeaker(persona="Anchor 1", voice="Kore"),
+              text.VoiceoverSpeaker(persona="Anchor 2", voice="Charon"),
+          ],
+          statements=[
+              text.VoiceoverStatement(
+                  voice="Kore", text="Hello from speaker 1"
+              ),
+              text.VoiceoverStatement(
+                  voice="Charon", text="Hello from speaker 2"
+              ),
+          ],
+          text="Hello from speaker 1 Hello from speaker 2",
       )
+      step.process(script)
 
     mock_open.assert_called_once_with(
         "tests/audio/generated/somevideoid/2_readaloud.wav", "wb"

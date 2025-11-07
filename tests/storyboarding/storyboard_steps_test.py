@@ -129,6 +129,7 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
         ),
     )
 
+  @mock.patch("os.path.exists", return_value=True)  # Mock to prevent bug fix from replacing test image paths
   @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
   @mock.patch.object(
       generative_models.GenerativeModel, "generate_content", autospec=True
@@ -187,12 +188,13 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
 
     self.assertEqual(text_overlays, _TEXT_OVERLAYS)
 
+  @mock.patch("os.path.exists", return_value=True)  # Mock to prevent bug fix from replacing test image paths
   @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
   @mock.patch.object(
       generative_models.GenerativeModel, "generate_content", autospec=True
   )
   def test_create_scenes_first_scene_starts_at_zero(
-      self, mock_generate_content, _
+      self, mock_generate_content, _, mock_exists
   ):
     with mock.patch.object(
         builtins, "open", new_callable=mock.mock_open, read_data="srt content"
@@ -231,12 +233,13 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
       self.assertEqual(scenes, expected_scenes)
       self.assertEqual(scenes[0].start_time, "00:00:00,000")
 
+  @mock.patch("os.path.exists", return_value=True)  # Mock to prevent bug fix from replacing test image paths
   @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
   @mock.patch.object(
       generative_models.GenerativeModel, "generate_content", autospec=True
   )
   def test_create_scenes_deduplicates_start_times(
-      self, mock_generate_content, _
+      self, mock_generate_content, _, mock_exists
   ):
     with mock.patch.object(
         builtins, "open", new_callable=mock.mock_open, read_data="srt content"
@@ -282,11 +285,12 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
       start_times = [scene.start_time for scene in scenes]
       self.assertEqual(len(start_times), len(set(start_times)))
 
+  @mock.patch("os.path.exists", return_value=True)  # Mock to prevent bug fix from replacing test image paths
   @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
   @mock.patch.object(
       generative_models.GenerativeModel, "generate_content", autospec=True
   )
-  def test_create_scenes_sorts(self, mock_generate_content, _):
+  def test_create_scenes_sorts(self, mock_generate_content, _, mock_exists):
     with mock.patch.object(
         builtins, "open", new_callable=mock.mock_open, read_data="srt content"
     ):

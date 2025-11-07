@@ -202,7 +202,22 @@ def _describe_images(image_file_paths: list[str]) -> str:
   model = generative_models.GenerativeModel(_GEMINI_MODEL)
   image_parts = ["Image List:"]
   for path in image_file_paths:
-    image_parts.extend([path, generative_models.Image.load_from_file(path)])
+    # Fix: Convert WEBP images to PNG since Vertex AI SDK doesn't support
+    # WEBP MIME type
+    if path.lower().endswith(".webp"):
+      from PIL import Image
+      import io
+
+      img = Image.open(path)
+      # Convert to PNG in memory
+      png_bytes = io.BytesIO()
+      img.save(png_bytes, format="PNG")
+      png_bytes.seek(0)
+      image_parts.extend(
+          [path, generative_models.Image.from_bytes(png_bytes.read())]
+      )
+    else:
+      image_parts.extend([path, generative_models.Image.load_from_file(path)])
   response = model.generate_content([prompt, *image_parts])
   return response.text
 
@@ -211,9 +226,9 @@ def serialize_scenes(scenes: list[storyboarding.Scene]) -> str:
   """Convert scenes into a string format for inclusion in the Gemini prompt."""
   serialized_scenes = []
   for scene in scenes:
-    serialized_scenes.append(
-        f"Scene start_time: {scene.start_time}, image_path: {scene.image_path}"
-    )
+    serialized_scenes.append(f"Scene start_time: {
+                scene.start_time}, image_path: {
+                scene.image_path}")
   return "\n".join(serialized_scenes)
 
 
@@ -591,6 +606,16 @@ def create_scenes(
   )
 
   scenes = msgspec.json.decode(response.text, type=list[storyboarding.Scene])
+
+  # Fix: LLM sometimes generates placeholder or hallucinated image paths
+  # (e.g., "/path/to/image/...") instead of using actual provided paths.
+  # Validate and replace invalid paths with actual images from the provided
+  # list.
+  if image_file_paths:  # Only fix paths if we have images to use
+    for idx, scene in enumerate(scenes):
+      if not os.path.exists(scene.image_path):
+        # Use images in round-robin fashion to ensure variety
+        scene.image_path = image_file_paths[idx % len(image_file_paths)]
 
   # Gemini occasionally returns duplicate start times which moviepy cannot
   # handle. We don't know enough about the images to reschedule them so we

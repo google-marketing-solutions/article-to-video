@@ -24,8 +24,11 @@ Try Article to Video in Colab!
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/google-marketing-solutions/article-to-video/blob/main/colab/Article_to_Video.ipynb)
 
 ## Requirements
-* Google Cloud project with Google Cloud Storage, Vertex AI, and Text-to-Speech
-  enabled APIs.
+* A Google Cloud project with the following APIs enabled:
+  * **Vertex AI API / Agent Platform API** (`aiplatform.googleapis.com`)
+  * **Cloud Text-to-Speech API** (`texttospeech.googleapis.com`)
+  * **Cloud Natural Language API** (`language.googleapis.com`)
+  * **Cloud Storage API** (`storage.googleapis.com`)
 * Valid article + related images to convert to a video.
 * Python 3.12 or higher recommended.
 * google-cloud-texttospeech >= 2.31.0 (for Gemini TTS support)

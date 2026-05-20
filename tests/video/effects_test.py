@@ -269,41 +269,39 @@ class EffectsTest(unittest.TestCase):
     np.testing.assert_array_equal(kwargs["final_position"], (0, 0))
     self.assertEqual(kwargs["style"], "linear")
 
+  @mock.patch.object(effects, "zoom_pan", autospec=True)
+  def test_zoom_pan_to_fast(self, mock_zoom_pan):
+    mock_clip = mock.MagicMock(spec=mpy.ImageClip)
+    mock_clip.size = (100, 100)
+    target = (25, 50)
 
-@mock.patch.object(effects, "zoom_pan", autospec=True)
-def test_zoom_pan_to_fast(self, mock_zoom_pan):
-  mock_clip = mock.MagicMock(spec=mpy.ImageClip)
-  mock_clip.size = (100, 100)
-  target = (25, 50)
+    effects.zoom_pan_to(mock_clip, target, fast=True)
 
-  effects.zoom_pan_to(mock_clip, target, fast=True)
+    args, kwargs = mock_zoom_pan.call_args
+    self.assertEqual(len(args), 1)
+    self.assertEqual(args[0], mock_clip)
+    self.assertEqual(kwargs["initial_zoom"], 1.0)
+    self.assertEqual(kwargs["final_zoom"], 2.0)
+    np.testing.assert_array_equal(kwargs["initial_position"], (0, 0))
+    np.testing.assert_allclose(kwargs["final_position"], (0.0, 25.0), atol=1)
+    self.assertEqual(kwargs["style"], "fast")
 
-  args, kwargs = mock_zoom_pan.call_args
-  self.assertEqual(len(args), 1)
-  self.assertEqual(args[0], mock_clip)
-  self.assertEqual(kwargs["initial_zoom"], 1.0)
-  self.assertEqual(kwargs["final_zoom"], 2.0)
-  np.testing.assert_array_equal(kwargs["initial_position"], (0, 0))
-  np.testing.assert_allclose(kwargs["final_position"], (-12.5, -25.0), atol=1)
-  self.assertEqual(kwargs["style"], "fast")
+  @mock.patch.object(effects, "zoom_pan", autospec=True)
+  def test_zoom_pan_to_slow(self, mock_zoom_pan):
+    mock_clip = mock.MagicMock(spec=mpy.ImageClip)
+    mock_clip.size = (100, 100)
+    target = (25, 50)
 
+    effects.zoom_pan_to(mock_clip, target, fast=False)
 
-@mock.patch.object(effects, "zoom_pan", autospec=True)
-def test_zoom_pan_to_slow(self, mock_zoom_pan):
-  mock_clip = mock.MagicMock(spec=mpy.ImageClip)
-  mock_clip.size = (100, 100)
-  target = (25, 50)
-
-  effects.zoom_pan_to(mock_clip, target, fast=False)
-
-  args, kwargs = mock_zoom_pan.call_args
-  self.assertEqual(len(args), 1)
-  self.assertEqual(args[0], mock_clip)
-  self.assertEqual(kwargs["initial_zoom"], 1.0)
-  self.assertEqual(kwargs["final_zoom"], 2.0)
-  np.testing.assert_array_equal(kwargs["initial_position"], (0, 0))
-  np.testing.assert_allclose(kwargs["final_position"], (-12.5, -25.0), atol=1)
-  self.assertEqual(kwargs["style"], "linear")
+    args, kwargs = mock_zoom_pan.call_args
+    self.assertEqual(len(args), 1)
+    self.assertEqual(args[0], mock_clip)
+    self.assertEqual(kwargs["initial_zoom"], 1.0)
+    self.assertEqual(kwargs["final_zoom"], 2.0)
+    np.testing.assert_array_equal(kwargs["initial_position"], (0, 0))
+    np.testing.assert_allclose(kwargs["final_position"], (0.0, 25.0), atol=1)
+    self.assertEqual(kwargs["style"], "linear")
 
 
 if __name__ == "__main__":

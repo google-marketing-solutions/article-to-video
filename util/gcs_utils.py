@@ -8,7 +8,10 @@ from google.cloud import storage
 
 
 def upload_to_gcs(
-    source_file_path: str, bucket_name: str, destination_blob: str
+    source_file_path: str,
+    bucket_name: str,
+    destination_blob: str,
+    gcp_project: str | None = None,
 ) -> str:
   """Uploads a local file to the Google Cloud Storage bucket.
 
@@ -16,6 +19,7 @@ def upload_to_gcs(
     source_file_path: The local file path of the file.
     bucket_name (str): The name of the GCS bucket to upload to.
     destination_blob (str): The name to give the uploaded file in GCS.
+    gcp_project: Optional GCP project ID to bind the client to.
 
   Returns:
     gsutil URI of the file.
@@ -36,7 +40,7 @@ def upload_to_gcs(
   )
 
   try:
-    client = storage.Client()
+    client = storage.Client(project=gcp_project)
     # Check if the local file exists before trying to upload
     if not os.path.isfile(source_file_path):
       raise FileNotFoundError(f"File not found: {source_file_path}")

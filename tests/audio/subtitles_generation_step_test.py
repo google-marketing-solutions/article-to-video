@@ -2,6 +2,7 @@ import datetime
 import os
 import unittest
 from unittest import mock
+
 import audio
 from audio import subtitles_generation_step
 from google.cloud import speech_v1
@@ -64,12 +65,10 @@ class SubtitlesGenerationStepTest(unittest.TestCase):
       "upload_to_gcs",
       return_value="gs://my_bucket_name/subtitles.srt",
   )
-  @mock.patch.object(
-      subtitles_generation_step.speech_v1.SpeechClient, "long_running_recognize"
-  )
+  @mock.patch("audio.subtitles_generation_step.speech_v1.SpeechClient")
   @mock.patch("builtins.open", new_callable=mock.mock_open)
   def test_srt_file_output_success(
-      self, mock_open_file, mock_long_running_recognize, mock_upload_to_gcs
+      self, mock_open_file, mock_speech_client_class, mock_upload_to_gcs
   ):
     """Test that SRT file successfully written."""
 
@@ -156,7 +155,8 @@ class SubtitlesGenerationStepTest(unittest.TestCase):
 
     mock_operation = mock.Mock()
     mock_operation.result.return_value.results = [mock_result]
-    mock_long_running_recognize.return_value = mock_operation
+    mock_client = mock_speech_client_class.return_value
+    mock_client.long_running_recognize.return_value = mock_operation
 
     transcript_text = "Welcome to today's news update. This is the subtitle."
     expected_subtitles = (
@@ -191,6 +191,7 @@ class SubtitlesGenerationStepTest(unittest.TestCase):
         "tests/audio/generated/testvideoid/3_subtitles.srt",
         "my_bucket_name",
         "testvideoid/3_subtitles.srt",
+        gcp_project="my_gcp_project",
     )
 
     self.assertEqual(

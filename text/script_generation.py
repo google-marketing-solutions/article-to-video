@@ -65,6 +65,7 @@ def load_script(script_path: str) -> VoiceoverScript:
         f" {script_path}: {e}"
     ) from e
 
+
 GEMINI_VOICES = [
     "Kore",  # Female
     "Charon",  # Male
@@ -107,7 +108,7 @@ class ScriptGenerator:
     self.speakers = speakers
     self.language = language
     self.multitext = multitext
-    self._llm = llm or genai.GenerativeModel("gemini-2.5-pro")
+    self._llm = llm or genai.GenerativeModel("gemini-3.1-pro-preview")
 
   def _create_response_schema(self) -> dict[str, any]:
     return {
@@ -240,13 +241,31 @@ class ScriptGenerator:
     )
     script = msgspec.json.decode(response.text, type=VoiceoverScript)
 
-    # Gemini sometimes returns voices that are not in the list of available
-    # voices. When this happens, fall back to a valid default option.
-    if script.default_voice not in self._voices:
-      script.default_voice = self._voices[0]
+    # Ensure all registered speakers use valid Gemini voices (avoiding
+    # duplicates if possible)
+    used_voices = set()
+    for speaker in script.speakers:
+      if speaker.voice not in self._voices:
+        # Find a voice in self._voices not yet used
+        for voice in self._voices:
+          if voice not in used_voices:
+            speaker.voice = voice
+            break
+        else:
+          speaker.voice = self._voices[0]
+      used_voices.add(speaker.voice)
+
+    # Ensure all statement voices strictly align with voices registered in
+    # script.speakers
+    valid_speaker_voices = [s.voice for s in script.speakers]
+    if not valid_speaker_voices:
+      valid_speaker_voices = [self._voices[0]]
+
+    if script.default_voice not in valid_speaker_voices:
+      script.default_voice = valid_speaker_voices[0]
 
     for statement in script.statements:
-      if statement.voice not in self._voices:
+      if statement.voice not in valid_speaker_voices:
         statement.voice = script.default_voice
 
     if output_file:

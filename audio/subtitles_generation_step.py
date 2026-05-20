@@ -2,6 +2,7 @@
 
 import string
 from typing import List, MutableSequence, Tuple
+from google.api_core import client_options
 from google.cloud import speech_v1
 import pipeline
 import srt
@@ -46,6 +47,7 @@ class SubtitlesGenerationStep(pipeline.VideoGenerationStep):
         output_path,
         self.gcs_bucket_name,
         f"{self.video_id}/{self._OUTPUT_SRT_FILE}",
+        gcp_project=self.gcp_project,
     )
     self.logger.info("Uploaded SRT file to GCS: %s", gcs_uri)
     return output_path
@@ -79,7 +81,12 @@ class SubtitlesGenerationStep(pipeline.VideoGenerationStep):
     """
 
     self.logger.info("Transcribing %s ...", audio_gcs_uri)
-    client = speech_v1.SpeechClient()
+    client_opts = (
+        client_options.ClientOptions(quota_project_id=self.gcp_project)
+        if self.gcp_project
+        else None
+    )
+    client = speech_v1.SpeechClient(client_options=client_opts)
 
     config = {
         "enable_word_time_offsets": True,

@@ -12,7 +12,7 @@ from video import video_generation_errors
 import video_generator_execution
 import yaml
 
-config = yaml.safe_load(open('config.yml'))
+config = yaml.safe_load(open('config.yml', encoding='utf-8'))
 
 vertexai.init(project=config['gcp_project'], location=config['gcp_location'])
 
@@ -222,6 +222,7 @@ def generate_video(video_id: str):
         video_path,
         config['gcs_bucket_name'],
         os.path.join('generated_videos', video_id, 'video.mp4'),
+        gcp_project=config['gcp_project'],
     )
 
     return flask.jsonify({
@@ -232,5 +233,6 @@ def generate_video(video_id: str):
     return flask.jsonify(
         {'status': 'Not enough suitable images found in article'}
     )
-  except Exception:  # pylint: disable=broad-exception-caught
+  except Exception as e:  # pylint: disable=broad-exception-caught
+    logging.exception('Error generating video: %s', e)
     return flask.jsonify({'status': 'Unknown error generating your video.'})

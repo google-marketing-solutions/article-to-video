@@ -9,8 +9,9 @@ import msgspec
 import storyboarding
 from text import sentiment_analysis_step
 from vertexai import generative_models
+from video import video_generation_errors
 
-_GEMINI_MODEL = "gemini-2.5-flash"
+_GEMINI_MODEL = "gemini-3.5-flash"
 
 
 def _parse_srt_file(srt_file_path: str) -> tuple[list[str], int]:
@@ -396,6 +397,11 @@ def create_scenes(
     A list of Scenes
   """
 
+  if not image_file_paths:
+    raise video_generation_errors.NoImagesFoundError(
+        "No image paths were provided for storyboard generation."
+    )
+
   splash_prompt = textwrap.dedent(f"""\
     9. If there is an image named "{splash_image}" and there's no other image
     that fits well or better at the beginning, start the slideshow with
@@ -632,6 +638,12 @@ def create_scenes(
       scenes_with_deduped_start_times, key=lambda x: x.start_time
   )
 
+  # Fail gracefully if no scenes could be established
+  if not scenes_with_deduped_start_times:
+    raise video_generation_errors.NoImagesFoundError(
+        "No scenes could be generated from the provided images."
+    )
+
   # Ensure the first scene starts at time 00:00
   scenes_with_deduped_start_times[0].start_time = "00:00:00,000"
   return scenes_with_deduped_start_times
@@ -645,6 +657,7 @@ def create_storyboard_step(
     generate_text_overlays: bool,
     splash_image: str | None = None,
     output_file_path: os.PathLike[str] | None = None,
+    gcp_project: str | None = None,
 ) -> storyboarding.Storyboard:
   """Assembles a Storyboard for video generation.
 
@@ -657,6 +670,7 @@ def create_storyboard_step(
     splash_image: File name of the splash image (do not include filename
       extension).
     output_file_path: File path to save the generated storyboard,if provided.
+    gcp_project: The GCP project ID for client configuration.
 
   Returns:
     A Storyboard.
@@ -678,7 +692,9 @@ def create_storyboard_step(
   else:
     text_overlays = []
 
-  analyze_sentiment = sentiment_analysis_step.SentimentAnalyzerStep()
+  analyze_sentiment = sentiment_analysis_step.SentimentAnalyzerStep(
+      gcp_project=gcp_project
+  )
   background_audio_path = analyze_sentiment.process(article_content)
 
   storyboard = storyboarding.Storyboard(

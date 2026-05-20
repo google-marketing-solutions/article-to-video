@@ -72,13 +72,22 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
       "open",
       new_callable=mock.mock_open,
   )
+  @mock.patch(
+      "storyboarding.storyboard_steps.sentiment_analysis_step.SentimentAnalyzerStep"
+  )
   def test_create_storyboard(
       self,
+      mock_sentiment_analyzer,
       mock_open,
       mock_generative_model,
       mock_create_text_overlays,
       mock_create_scenes,
   ):
+    # Mock SentimentAnalyzerStep
+    mock_analyzer_instance = mock_sentiment_analyzer.return_value
+    mock_analyzer_instance.process.return_value = (
+        "background_music/mild_neutral.mp3"
+    )
     # Mock the return value of create_scenes()
     mock_create_scenes.return_value = _SCENES
 
@@ -98,7 +107,7 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
     mock_model_instance.generate_content.return_value = mock_response
 
     # Mock open for both text overlays and SRT file
-    def mock_open_side_effect(file, *_args, **_kwargs):
+    def mock_open_side_effect(file, *_unused_args, **_unused_kwargs):
       if file == "./output/text_overlays.json":
         return mock.mock_open(read_data=_TEXT_OVERLAYS_TEXT_FILE).return_value
       elif file == "/srt/path":
@@ -129,7 +138,9 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
         ),
     )
 
-  @mock.patch("os.path.exists", return_value=True)  # Mock to prevent bug fix from replacing test image paths
+  @mock.patch(
+      "os.path.exists", return_value=True
+  )  # Mock to prevent bug fix from replacing test image paths
   @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
   @mock.patch.object(
       generative_models.GenerativeModel, "generate_content", autospec=True
@@ -188,7 +199,9 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
 
     self.assertEqual(text_overlays, _TEXT_OVERLAYS)
 
-  @mock.patch("os.path.exists", return_value=True)  # Mock to prevent bug fix from replacing test image paths
+  @mock.patch(
+      "os.path.exists", return_value=True
+  )  # Mock to prevent bug fix from replacing test image paths
   @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
   @mock.patch.object(
       generative_models.GenerativeModel, "generate_content", autospec=True
@@ -233,7 +246,9 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
       self.assertEqual(scenes, expected_scenes)
       self.assertEqual(scenes[0].start_time, "00:00:00,000")
 
-  @mock.patch("os.path.exists", return_value=True)  # Mock to prevent bug fix from replacing test image paths
+  @mock.patch(
+      "os.path.exists", return_value=True
+  )  # Mock to prevent bug fix from replacing test image paths
   @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
   @mock.patch.object(
       generative_models.GenerativeModel, "generate_content", autospec=True
@@ -285,7 +300,9 @@ class CreateStoryBoardStepsTest(unittest.TestCase):
       start_times = [scene.start_time for scene in scenes]
       self.assertEqual(len(start_times), len(set(start_times)))
 
-  @mock.patch("os.path.exists", return_value=True)  # Mock to prevent bug fix from replacing test image paths
+  @mock.patch(
+      "os.path.exists", return_value=True
+  )  # Mock to prevent bug fix from replacing test image paths
   @mock.patch.object(generative_models.Image, "load_from_file", autospec=True)
   @mock.patch.object(
       generative_models.GenerativeModel, "generate_content", autospec=True

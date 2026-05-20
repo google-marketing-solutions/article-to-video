@@ -9,8 +9,10 @@ Added for Gemini TTS language support: Migrated from legacy Cloud TTS to Gemini
 """
 
 from typing import Tuple
+
 # Added for Gemini TTS language support: Updated to use standard
 # texttospeech (v1) for Gemini TTS support
+from google.api_core import client_options
 from google.cloud import texttospeech
 import pipeline
 from text import script_generation
@@ -138,7 +140,12 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
         output_path,
     )
 
-    client = texttospeech.TextToSpeechClient()
+    client_opts = (
+        client_options.ClientOptions(quota_project_id=self.gcp_project)
+        if self.gcp_project
+        else None
+    )
+    client = texttospeech.TextToSpeechClient(client_options=client_opts)
 
     # Added for Gemini TTS language support: Create multi-speaker markup
     # for turn-based synthesis
@@ -196,5 +203,6 @@ class TextToSpeechStep(pipeline.VideoGenerationStep):
         output_path,
         self.gcs_bucket_name,
         f"{self.video_id}/{self._OUTPUT_AUDIO_FILE}",
+        gcp_project=self.gcp_project,
     )
     return output_path, audio_gcs_uri, script.text

@@ -279,6 +279,7 @@ class VideoGenerator:
         generate_text_overlays=not context.disable_text_overlays,
         splash_image=context.splash_image,
         output_file_path=storyboard_path,
+        gcp_project=context.gcp_project,
     )
 
   def generate_video_step(

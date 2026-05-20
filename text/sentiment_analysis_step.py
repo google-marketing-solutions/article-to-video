@@ -2,6 +2,7 @@
 
 import enum
 import logging
+from google.api_core import client_options
 from google.cloud import language_v2
 
 
@@ -22,9 +23,19 @@ class Intensity(enum.Enum):
 class SentimentAnalyzerStep:
   """A pipeline step that determines the sentiment of the article summary."""
 
-  def __init__(self, client=None):
+  def __init__(self, client=None, gcp_project: str | None = None):
     super().__init__()
-    self.client = client or language_v2.LanguageServiceClient()
+    if client:
+      self.client = client
+    else:
+      client_opts = (
+          client_options.ClientOptions(quota_project_id=gcp_project)
+          if gcp_project
+          else None
+      )
+      self.client = language_v2.LanguageServiceClient(
+          client_options=client_opts
+      )
     self.logger = logging.getLogger(self.__class__.__name__)
 
   def process(self, content: str) -> str:

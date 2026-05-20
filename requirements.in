@@ -17,8 +17,6 @@ gunicorn
 opencv-python
 parameterized
 msgspec
-ray==2.33.0
-tensorflow-io-gcs-filesystem==0.37.1
 aiohttp==3.11.12
 aiohttp-cors
 colorful
@@ -29,3 +27,4 @@ smart-open
 virtualenv
 memray
 h11>=0.16.0
+setuptools

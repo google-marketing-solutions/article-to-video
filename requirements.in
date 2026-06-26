@@ -28,3 +28,4 @@ virtualenv
 memray
 h11>=0.16.0
 setuptools
+litellm>=1.84

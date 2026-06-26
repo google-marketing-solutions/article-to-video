@@ -227,9 +227,9 @@ def serialize_scenes(scenes: list[storyboarding.Scene]) -> str:
   """Convert scenes into a string format for inclusion in the Gemini prompt."""
   serialized_scenes = []
   for scene in scenes:
-    serialized_scenes.append(f"Scene start_time: {
-                scene.start_time}, image_path: {
-                scene.image_path}")
+    serialized_scenes.append(
+        f"Scene start_time: {scene.start_time}, image_path: {scene.image_path}"
+    )
   return "\n".join(serialized_scenes)
 
 

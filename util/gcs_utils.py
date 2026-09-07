@@ -22,7 +22,7 @@ def upload_to_gcs(
     gcp_project: Optional GCP project ID to bind the client to.
 
   Returns:
-    gsutil URI of the file.
+    gcloud storage URI of the file.
   """
   # Append file suffix if not provided in destination_blob
   if pathlib.Path(destination_blob).suffix:
